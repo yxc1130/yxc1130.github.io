@@ -16,18 +16,14 @@ body{background:#0d0d0d;font-family:'Segoe UI','Microsoft YaHei',sans-serif;colo
 .rotate-hint .txt{font-size:16px;color:#d4874a;text-align:center;line-height:1.6}
 .rotate-hint .subtxt{font-size:12px;color:#6b5540;text-align:center}
 
-/* 手机竖屏强制旋转横屏（CSS暴力旋转） */
-@media(max-width:900px){
-  body.force-landscape{
-    width:100vw;height:100vh;margin:0;padding:0;display:block;gap:0;overflow:hidden;
-    position:fixed;top:0;left:0
-  }
-  body.force-landscape .game-rotate{
-    position:absolute;top:0;left:0;
-    width:100vh;height:100vw;
-    transform-origin:0 0;
-    transform:rotate(90deg) translateY(-100%)
-  }
+/* 手机横屏提示：竖屏时隐藏游戏，显示提示；横屏时显示游戏 */
+@media(max-width:900px)and(orientation:portrait){
+  .game-rotate{display:none!important}
+  .rotate-hint{display:flex!important}
+}
+@media(max-width:900px)and(orientation:landscape){
+  .rotate-hint{display:none!important}
+  .game-rotate{display:block!important}
 }
 
 /* 手机横屏适配 */
@@ -3689,39 +3685,23 @@ function playSE(type) {
 </div>
 
 <script>
-// 手机横屏方案：CSS暴力旋转 + 提示兜底
+// 手机横屏提示检测（CSS media query 已处理显示隐藏，JS只做兜底）
 function checkOrientation() {
   const hint = document.getElementById('rotateHint');
   if (!hint) return;
   const isMobile = window.innerWidth < 900;
-  const isLandscape = window.innerWidth > window.innerHeight;
-  const isLandscapeMatch = window.matchMedia('(orientation:landscape)').matches;
-  
-  if (isMobile) {
-    // 手机设备：竖屏时旋转页面，横屏时正常
-    if (!isLandscape && !isLandscapeMatch) {
-      // 竖屏 → 启用CSS旋转
-      document.body.classList.add('force-landscape');
-      hint.classList.remove('show');
-    } else {
-      // 横屏 → 正常显示
-      document.body.classList.remove('force-landscape');
-      hint.classList.remove('show');
-    }
-    // 尝试锁定横屏（部分浏览器支持）
-    try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(function(){}); } catch(e){}
+  const isPortrait = window.innerHeight > window.innerWidth;
+  if (isMobile && isPortrait) {
+    hint.classList.add('show');
   } else {
-    // PC/平板 → 不做任何处理
-    document.body.classList.remove('force-landscape');
     hint.classList.remove('show');
   }
 }
-const mqLandscape = window.matchMedia('(orientation:landscape)');
-mqLandscape.addEventListener('change', checkOrientation);
+const mqPortrait = window.matchMedia('(orientation:portrait)');
+mqPortrait.addEventListener('change', checkOrientation);
 window.addEventListener('resize', checkOrientation);
 window.addEventListener('orientationchange', function() {
-  setTimeout(checkOrientation, 300);
-  setTimeout(checkOrientation, 800);
+  setTimeout(checkOrientation, 400);
 });
 checkOrientation();
 </script>
