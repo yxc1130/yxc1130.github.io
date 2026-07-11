@@ -15,10 +15,16 @@ body{background:#0d0d0d;font-family:'Segoe UI','Microsoft YaHei',sans-serif;colo
 @keyframes rotateAnim{0%,100%{transform:rotate(0deg)}50%{transform:rotate(90deg)}}
 .rotate-hint .txt{font-size:16px;color:#d4874a;text-align:center;line-height:1.6}
 .rotate-hint .subtxt{font-size:12px;color:#6b5540;text-align:center}
-/* CSS-only 横屏强制：手机竖屏时只显示提示 */
-@media(max-width:900px)and(orientation:portrait){
-  .rotate-hint{display:flex!important}
-  .map-container,.status-bar,h1,.sub{display:none!important}
+
+/* 手机竖屏强制旋转横屏（CSS暴力旋转） */
+@media(max-width:900px){
+  body.force-landscape{
+    position:fixed;top:0;left:0;right:0;bottom:0;width:100vw;height:100dvh;overflow:hidden;padding:0;margin:0
+  }
+  body.force-landscape .game-rotate{
+    width:100vh;height:100vw;transform:rotate(90deg);transform-origin:center center;
+    position:fixed;top:50%;left:50%;margin-top:-50vw;margin-left:-50vh;overflow:auto
+  }
 }
 
 /* 手机横屏适配 */
@@ -363,7 +369,7 @@ h1{font-size:20px;color:#d4874a;letter-spacing:2px;font-family:Georgia,serif}
 </style>
 </head>
 <body>
-
+<div class="game-rotate">
 <h1>🏰 废铁高塔</h1>
 <div class="sub">选择起点开始 · 虚线换线 · 击败Boss进入下一层</div>
 
@@ -3671,6 +3677,7 @@ function playSE(type) {
 }
 
 </script>
+</div>
 <!-- 横屏提示 -->
 <div class="rotate-hint" id="rotateHint">
   <div class="icon">📱</div>
@@ -3679,43 +3686,41 @@ function playSE(type) {
 </div>
 
 <script>
-// 横屏检测 - 强制横屏模式
+// 手机横屏方案：CSS暴力旋转 + 提示兜底
 function checkOrientation() {
   const hint = document.getElementById('rotateHint');
   if (!hint) return;
   const isMobile = window.innerWidth < 900;
   const isLandscape = window.innerWidth > window.innerHeight;
   const isLandscapeMatch = window.matchMedia('(orientation:landscape)').matches;
-  const isLandscapeAny = isLandscape || isLandscapeMatch;
-  if (isMobile && !isLandscapeAny) {
-    hint.classList.add('show');
+  
+  if (isMobile) {
+    // 手机设备：竖屏时旋转页面，横屏时正常
+    if (!isLandscape && !isLandscapeMatch) {
+      // 竖屏 → 启用CSS旋转
+      document.body.classList.add('force-landscape');
+      hint.classList.remove('show');
+    } else {
+      // 横屏 → 正常显示
+      document.body.classList.remove('force-landscape');
+      hint.classList.remove('show');
+    }
+    // 尝试锁定横屏（部分浏览器支持）
+    try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(function(){}); } catch(e){}
   } else {
+    // PC/平板 → 不做任何处理
+    document.body.classList.remove('force-landscape');
     hint.classList.remove('show');
   }
 }
-// 用 matchMedia 监听更可靠
 const mqLandscape = window.matchMedia('(orientation:landscape)');
 mqLandscape.addEventListener('change', checkOrientation);
 window.addEventListener('resize', checkOrientation);
 window.addEventListener('orientationchange', function() {
-  setTimeout(checkOrientation, 500);
-  setTimeout(checkOrientation, 1000);
+  setTimeout(checkOrientation, 300);
+  setTimeout(checkOrientation, 800);
 });
 checkOrientation();
-
-// 锁定横屏（支持 Screen Orientation API 的浏览器）
-function lockLandscape() {
-  try {
-    if (screen.orientation && screen.orientation.lock) {
-      screen.orientation.lock('landscape').catch(function(){});
-    }
-  } catch(e) {}
-}
-// 用户首次交互后尝试锁定横屏
-document.addEventListener('click', function lockOnce() {
-  lockLandscape();
-  document.removeEventListener('click', lockOnce);
-}, { once: true });
 </script>
 </body>
 </html>
