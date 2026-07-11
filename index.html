@@ -1,0 +1,3593 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>废铁高塔</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d0d0d;font-family:'Segoe UI','Microsoft YaHei',sans-serif;color:#d4c9a8;padding:20px;display:flex;flex-direction:column;align-items:center;gap:10px;overflow-x:hidden}
+h1{font-size:20px;color:#d4874a;letter-spacing:2px;font-family:Georgia,serif}
+.sub{font-size:11px;color:#8B7D6B}
+
+/* ===== 地图容器 ===== */
+.map-container{width:1000px;height:460px;border-radius:10px;border:2px solid #3d3028;position:relative;overflow:hidden;background:#0d0d0d}
+.map-bg{position:absolute;top:0;left:0;right:0;bottom:0;background-size:cover;background-position:center;opacity:0.85;z-index:0}
+.map-bg::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(13,13,13,0.15) 0%,rgba(13,13,13,0.35) 40%,rgba(13,13,13,0.7) 100%)}
+.map-body,.map-top{position:relative;z-index:1}
+
+.map-top{position:absolute;top:0;left:0;right:0;height:38px;background:rgba(0,0,0,0.85);border-bottom:1px solid #3d3028;display:flex;align-items:center;padding:0 16px;justify-content:space-between;z-index:10;font-size:11px}
+.map-top .left{display:flex;align-items:center;gap:10px}
+.map-top .left .zone{color:#d4874a;font-family:Georgia,serif}
+.map-top .right{display:flex;gap:12px;font-size:10px}
+.map-top .right .val{color:#d4c9a8}
+
+/* 三路布局 */
+.map-body{position:absolute;top:38px;left:0;right:0;bottom:0;overflow:auto;padding:16px 14px}
+.map-grid{display:flex;gap:12px;min-width:fit-content;height:100%;align-items:center}
+
+/* 列组 */
+.mcol{display:flex;flex-direction:column;align-items:center;min-width:96px;position:relative;gap:0}
+.col-num{font-size:9px;color:#555;margin-bottom:6px;letter-spacing:1px}
+
+/* 三路 - 加大间距 */
+.lane-row{display:flex;flex-direction:column;align-items:center;gap:4px;position:relative}
+
+/* 节点 */
+.mnode{width:54px;height:54px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:20px;cursor:pointer;transition:all .25s;position:relative;z-index:3;border:2px solid #3d3028;background:radial-gradient(circle at 40% 30%,#2a1f14,#1a1008);flex-shrink:0}
+.mnode:hover{transform:scale(1.12);z-index:5}
+.mnode .mlbl{position:absolute;bottom:-13px;font-size:7px;color:#8B7D6B;white-space:nowrap;left:50%;transform:translateX(-50%);pointer-events:none}
+
+/* 节点状态 */
+.mnode.locked{opacity:0.45;cursor:not-allowed}
+.mnode.unlocked{border-color:#6b5540}
+.mnode.unlocked:hover{border-color:#d4874a;box-shadow:0 0 16px rgba(212,135,74,0.15)}
+.mnode.done{opacity:0.3;cursor:default;pointer-events:none;border-color:#2a2a2a!important}
+.mnode.current{border-color:#d4874a;box-shadow:0 0 12px rgba(212,135,74,0.25)}
+.mnode.current:hover{transform:scale(1.12);box-shadow:0 0 20px rgba(212,135,74,0.35)}
+
+/* 节点类型 */
+.mnode.n-elite{border-color:#B8860B;background:radial-gradient(circle at 40% 30%,#3d2a00,#2a1a00)}
+.mnode.n-boss{width:60px;height:60px;font-size:24px;border-color:#FF4500;background:radial-gradient(circle at 40% 30%,#3d1a00,#1a0d00)}
+.mnode.n-shop{border-color:#00b4d8;background:radial-gradient(circle at 40% 30%,#0d3d5a,#0a1a2a)}
+.mnode.n-event{border-color:#A78BFA;background:radial-gradient(circle at 40% 30%,#3a1a4a,#1a0d2a)}
+.mnode.n-craft{border-color:#d4874a;background:radial-gradient(circle at 40% 30%,#3d2a1a,#1a140a)}
+.mnode.n-unknown{border-color:#70e000;background:radial-gradient(circle at 40% 30%,#2a3d1a,#0d1a0a)}
+.mnode.n-rest{border-color:#84CC16;background:radial-gradient(circle at 40% 30%,#2a3d2a,#1a2a1a)}
+.mnode.n-start{border-color:#d4874a;background:radial-gradient(circle at 40% 30%,#2a2a1a,#1a1a0d)}
+
+/* 纵向虚线换线 - 加高加宽 */
+.vswitch{width:60px;height:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;z-index:2;padding:4px 0}
+.vswitch .vline{width:0;height:100%;border-left:3px dashed #d4874a88;transition:all .3s}
+.vswitch.locked .vline{border-color:#2a2a2a}
+.vswitch .vhint{position:absolute;font-size:8px;color:#d4874a;opacity:0;transition:all .3s;background:#0d0d0dee;padding:2px 10px;border-radius:4px;white-space:nowrap;z-index:6;pointer-events:none;border:1px solid #d4874a44}
+.vswitch .vhint.r{left:20px}
+.vswitch .vhint.l{right:20px}
+.vswitch:hover .vline{border-color:#FFD700;border-width:3px;box-shadow:0 0 12px rgba(212,135,74,0.3)}
+.vswitch:hover .vhint{opacity:1}
+.vswitch.locked{cursor:not-allowed}
+.vswitch.locked .vline{border-color:#2a2a2a;border-style:solid;border-width:1px}
+.vswitch.locked:hover .vline{border-color:#3d3028;box-shadow:none}
+
+/* 遮罩滑动入场 */
+.result-overlay{display:none;position:absolute;top:0;left:0;right:0;bottom:0;z-index:60;border-radius:10px;flex-direction:column;align-items:center;justify-content:center;gap:12px;animation:slideUp .35s ease-out;overflow:hidden}
+.result-overlay.show{display:flex}
+.result-overlay.has-bg{background-size:cover;background-position:center}
+.result-overlay.no-bg{background:rgba(0,0,0,0.35)}
+@keyframes slideUp{0%{transform:translateY(30px);opacity:0}100%{transform:translateY(0);opacity:1}}
+
+/* 遮罩暗化层 - 在背景图上覆盖透明黑 */
+.result-overlay::before{content:none;position:absolute;top:0;left:0;right:0;bottom:0;z-index:0;pointer-events:none}
+.result-overlay.has-bg::before{content:'';background:linear-gradient(180deg,rgba(0,0,0,0.2) 0%,rgba(0,0,0,0.35) 50%,rgba(0,0,0,0.5) 100%)}
+.result-overlay .overlay-bg{position:absolute;top:0;left:0;right:0;bottom:0;z-index:-1;background-size:cover;background-position:center}
+
+/* 战斗背景图 */
+.battle-scene-bg{position:absolute;top:0;left:0;right:0;bottom:0;z-index:0;background-size:cover;background-position:center;opacity:0.85;transition:opacity .8s}
+.battle-scene-bg::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(0,0,0,0.2),rgba(0,0,0,0.45))}
+
+/* 大UI */
+.result-title{font-size:32px;font-family:Georgia,serif;text-shadow:0 0 20px rgba(212,135,74,0.3)}
+.result-desc{font-size:14px;color:#b8a88a;text-align:center;line-height:1.7;max-width:460px}
+.result-btn{padding:12px 36px;border-radius:8px;border:1px solid #6b5540;background:linear-gradient(180deg,#3d3028,#1a1410);color:#d4c9a8;font-size:15px;cursor:pointer;font-family:inherit;transition:all .25s;letter-spacing:1px}
+.result-btn:hover{background:linear-gradient(180deg,#5a4538,#2a1f14);border-color:#d4874a;transform:translateY(-2px);box-shadow:0 4px 20px rgba(212,135,74,0.15)}
+
+.choice-btn{padding:12px 24px;border-radius:8px;border:1px solid #3d3028;background:linear-gradient(180deg,#2a1f14,#1a1008);color:#d4c9a8;font-size:13px;cursor:pointer;font-family:inherit;transition:all .25s;width:100%;text-align:left;display:flex;align-items:center;gap:10px}
+.choice-btn:hover{background:linear-gradient(180deg,#3d3028,#2a1f14);border-color:#d4874a;transform:translateY(-2px);box-shadow:0 4px 16px rgba(212,135,74,0.12)}
+.choice-btn .c-icon{font-size:22px;width:32px;text-align:center}
+.choice-btn .c-text{flex:1}
+.choice-btn .c-title{font-size:13px;font-weight:600;color:#d4874a}
+.choice-btn .c-desc{font-size:10px;color:#8B7D6B;margin-top:1px}
+.choice-btn .c-cost{font-size:10px;color:#ff4757;font-weight:600}
+
+.battle-overlay{display:none;position:absolute;top:0;left:0;right:0;bottom:0;z-index:50;border-radius:10px;flex-direction:column;overflow:hidden;animation:fadeIn .3s ease-out}
+.battle-overlay.show{display:flex}
+@keyframes fadeIn{0%{opacity:0}100%{opacity:1}}
+
+/* 水平连接线 - SVG */
+.map-svg{position:absolute;top:38px;left:0;width:100%;height:calc(100% - 38px);pointer-events:none;z-index:1}
+
+/* 侧标签 */
+.lane-tag{position:absolute;font-size:9px;color:#8B7D6B;width:20px;text-align:center;z-index:1}
+.lane-tag.mid{color:#d4874a;font-weight:600}
+
+/* ===== 状态栏 ===== */
+.status-bar{width:1000px;display:flex;gap:16px;padding:10px 16px;background:#1a1410;border:1px solid #3d3028;border-radius:8px;font-size:12px;align-items:center;flex-wrap:wrap}
+.status-bar .hp{color:#ff4757}
+.status-bar .scrap{color:#d4874a}
+.status-bar .gold{color:#ffd700}
+.status-bar .energy{color:#00b4d8}
+.status-bar .shield{color:#38bdf8}
+.status-bar .ideas{color:#A78BFA}
+
+/* ===== BATTLE OVERLAY ===== */
+.battle-bg{position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,#1a1410,#0d0d0d);z-index:0;transition:opacity .5s}
+.battle-bg::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background-image:radial-gradient(circle,rgba(212,135,74,0.03) 1px,transparent 1px);background-size:40px 40px;z-index:0}
+.battle-arena{position:relative;z-index:1;flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 50px}
+.battle-arena.shake{animation:shake .3s}
+@keyframes shake{0%,100%{transform:translateX(0) translateY(0)}15%{transform:translateX(-10px) translateY(-3px) rotate(-1deg)}30%{transform:translateX(10px) translateY(2px) rotate(1deg)}45%{transform:translateX(-7px) translateY(-1px)}60%{transform:translateX(7px) translateY(2px)}80%{transform:translateX(-3px) translateY(-1px)}}
+
+/* ===== 生态区战斗背景 ===== */
+.bg-zone-trash .battle-bg{background:linear-gradient(180deg,#2a2018,#1a1410,#0d0d0d)}
+.bg-zone-metal .battle-bg{background:linear-gradient(180deg,#0d1a0d,#0a140a,#0d0d0d)}
+.bg-zone-oil .battle-bg{background:linear-gradient(180deg,#2a2a00,#1a1a00,#0d0d0d)}
+.bg-zone-circuit .battle-bg{background:linear-gradient(180deg,#0d0d1a,#0a0a14,#0d0d0d)}
+.bg-zone-forge .battle-bg{background:linear-gradient(180deg,#2a0d00,#1a0800,#0d0d0d)}
+.bg-zone-toxic .battle-bg{background:linear-gradient(180deg,#1a0d2a,#100a1a,#0d0d0d)}
+.bg-zone-throne .battle-bg{background:linear-gradient(180deg,#2a1a00,#1a1000,#0d0d0d)}
+.bg-zone-boss .battle-bg{background:linear-gradient(180deg,#2a0d0d,#1a0505,#0d0d0d)}
+
+/* 各区域装饰粒子颜色 */
+.bg-zone-trash .battle-bg::before{background-image:radial-gradient(circle,rgba(139,125,107,0.05) 1px,transparent 1px)}
+.bg-zone-metal .battle-bg::before{background-image:radial-gradient(circle,rgba(132,204,22,0.05) 1px,transparent 1px)}
+.bg-zone-oil .battle-bg::before{background-image:radial-gradient(circle,rgba(255,215,0,0.05) 1px,transparent 1px)}
+.bg-zone-circuit .battle-bg::before{background-image:radial-gradient(circle,rgba(0,180,216,0.05) 1px,transparent 1px)}
+.bg-zone-forge .battle-bg::before{background-image:radial-gradient(circle,rgba(255,69,0,0.05) 1px,transparent 1px)}
+.bg-zone-toxic .battle-bg::before{background-image:radial-gradient(circle,rgba(167,139,250,0.05) 1px,transparent 1px)}
+.bg-zone-throne .battle-bg::before{background-image:radial-gradient(circle,rgba(212,135,74,0.05) 1px,transparent 1px)}
+
+/* ===== 角色精灵区（全身像）===== */
+.player-unit{text-align:center;position:relative;width:200px}
+.player-unit .sprite{width:160px;height:200px;display:flex;align-items:center;justify-content:center;position:relative}
+.player-unit .sprite img{width:160px;height:200px;object-fit:contain;image-rendering:pixelated}
+.player-unit .sprite.breathe{animation:breathe 2.5s ease-in-out infinite}
+.player-unit .sprite.hit{animation:playerHit .4s forwards}
+.player-unit .sprite.hit.breathe{animation:playerHit .4s forwards}
+@keyframes breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes playerHit{0%{transform:translateX(0)}15%{transform:translateX(-15px) rotate(-3deg)}30%{transform:translateX(10px) rotate(2deg)}50%{transform:translateX(-5px)}70%{transform:translateX(3px)}100%{transform:translateX(0)}}
+.player-unit .sprite.attack-slash{animation:attackSlash .35s ease-out forwards}
+.player-unit .sprite.attack-thrust{animation:attackThrust .3s ease-out forwards}
+.player-unit .sprite.attack-smash{animation:attackSmash .4s ease-out forwards}
+.player-unit .sprite.attack-spin{animation:attackSpin .4s ease-out forwards}
+.player-unit .sprite.attack-cast{animation:attackCast .35s ease-out forwards}
+@keyframes attackSlash{0%{transform:translateX(0) rotate(0deg)}30%{transform:translateX(20px) rotate(-5deg)}60%{transform:translateX(15px) rotate(-3deg)}100%{transform:translateX(0) rotate(0deg)}}
+@keyframes attackThrust{0%{transform:translateX(0) scaleX(1)}30%{transform:translateX(35px) scaleX(1.15)}100%{transform:translateX(0) scaleX(1)}}
+@keyframes attackSmash{0%{transform:translateY(0) scaleY(1)}20%{transform:translateY(-10px) scaleY(0.9)}40%{transform:translateY(15px) scaleY(1.2)}100%{transform:translateY(0) scaleY(1)}}
+@keyframes attackSpin{0%{transform:rotate(0deg)}50%{transform:rotate(25deg)}100%{transform:rotate(0deg)}}
+@keyframes attackCast{0%{transform:translateX(0) scale(1)}30%{transform:translateX(15px) scale(1.1)}60%{transform:translateX(-5px) scale(0.95)}100%{transform:translateX(0) scale(1)}}
+.player-unit .name{font-size:13px;color:#d4c9a8;margin-top:6px;font-family:Georgia,serif;letter-spacing:1px}
+
+/* 敌人在攻击前会前冲 */
+@keyframes enemyLunge{0%{transform:translateX(0)}30%{transform:translateX(-35px)}60%{transform:translateX(5px)}100%{transform:translateX(0)}}
+.enemy-attacking .sprite img{animation:enemyLunge .4s ease-out}
+
+.enemy-unit{text-align:center;position:relative;width:110px}
+.enemy-unit .sprite{width:160px;height:200px;display:flex;align-items:center;justify-content:center;position:relative}
+.enemy-unit .sprite img{width:160px;height:200px;object-fit:contain;image-rendering:pixelated}
+.enemy-unit .sprite.hit{animation:enemyHit .4s}
+@keyframes enemyHit{0%,100%{transform:translateX(0)}15%{transform:translateX(18px) rotate(2deg)}30%{transform:translateX(-8px) rotate(-1deg)}50%{transform:translateX(4px)}70%{transform:translateX(-2px)}}
+.enemy-unit .name{font-size:11px;color:#d4c9a8;margin-top:4px;font-family:Georgia,serif}
+.enemy-unit .intent{font-size:9px;color:#b8a88a;margin-top:2px}
+
+/* 受击闪光 */
+.sprite.flash{animation:spriteFlash .3s}
+@keyframes spriteFlash{0%,100%{filter:brightness(1)}20%{filter:brightness(3) saturate(0)}50%{filter:brightness(0.5)}80%{filter:brightness(2)}}
+
+.float-bar{position:absolute;top:-8px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:5}
+.float-tag{padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;display:flex;align-items:center;gap:3px}
+.float-tag.hp{background:rgba(0,0,0,0.8);border:1px solid #ff475744;color:#ff4757}
+.float-tag.shield{background:rgba(0,0,0,0.8);border:1px solid #00b4d844;color:#00b4d8}
+.hp-bar-container{position:absolute;bottom:-14px;left:50%;transform:translateX(-50%);width:80px;height:6px;background:#1a1410;border-radius:3px;overflow:hidden;border:1px solid #3d3028}
+.hp-bar-fill{height:100%;border-radius:3px;transition:width .4s ease-out}
+.hp-bar-fill.player{background:linear-gradient(90deg,#d4874a,#ff6b35)}
+.hp-bar-fill.enemy{background:linear-gradient(90deg,#8B4513,#ff4757)}
+.hp-bar-fill.boss-bar{background:linear-gradient(90deg,#FF4500,#ff6b35)}
+.shield-bar{height:3px;position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);width:60px;background:rgba(0,180,216,0.15);border-radius:2px;overflow:hidden;transition:all .3s}
+.shield-bar-fill{height:100%;background:#00b4d8;border-radius:2px;transition:width .3s}
+.dmg-popup{position:absolute;font-size:28px;font-weight:700;pointer-events:none;z-index:10;animation:dmgFloat .8s ease-out forwards;font-family:Georgia,serif}
+@keyframes dmgFloat{0%{opacity:1;transform:translateY(0) scale(1)}50%{opacity:1;transform:translateY(-30px) scale(1.2)}100%{opacity:0;transform:translateY(-60px) scale(.8)}}
+.dmg-popup.heal{color:#84CC16}
+.dmg-popup.damage{color:#ff4757}
+.dmg-popup.block{color:#00b4d8}
+.dmg-popup.crit{color:#FFD700;font-size:36px}
+.card-fly{position:absolute;width:60px;height:80px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:24px;z-index:20;pointer-events:none;animation:cardFly .4s ease-in forwards;border:1px solid #d4874a;background:radial-gradient(circle at 50% 30%,#2a1f14,#1a1008)}
+@keyframes cardFly{0%{opacity:1;transform:scale(1) rotate(0)}50%{transform:scale(.8) rotate(-5deg)}100%{opacity:0;transform:scale(.3) rotate(-10deg) translateY(20px)}}
+
+.battle-footer{position:relative;z-index:2;background:rgba(0,0,0,0.9);border-top:1px solid #3d3028;padding:12px 20px;display:flex;align-items:center;gap:12px}
+.energy-section{display:flex;align-items:center;gap:6px;min-width:80px}
+.energy-pip{width:16px;height:16px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px}
+.energy-pip.full{background:radial-gradient(circle at 40% 40%,#d4874a,#8B4513);border:1px solid #d4874a;color:#fff}
+.energy-pip.empty{background:#1a1410;border:1px solid #3d3028;color:#555}
+.hand-section{flex:1;display:flex;justify-content:center;align-items:flex-end;gap:-6px;padding:0 10px}
+.hand-card{width:68px;height:96px;border-radius:5px;padding:6px;display:flex;flex-direction:column;align-items:center;position:relative;transition:all .4s cubic-bezier(0.34,1.56,0.64,1);cursor:pointer;border:1px solid #6b5540;background:radial-gradient(circle at 50% 30%,#2a1f14,#1a1008);margin-left:-10px;transform-origin:bottom center;box-shadow:-2px 2px 4px rgba(0,0,0,0.4)}
+.hand-card:first-child{margin-left:0}
+.hand-card:nth-child(1){transform:rotate(-5deg) translateY(3px)}
+.hand-card:nth-child(2){transform:rotate(-2.5deg) translateY(1px)}
+.hand-card:nth-child(3){transform:rotate(0deg) translateY(0)}
+.hand-card:nth-child(4){transform:rotate(2.5deg) translateY(1px)}
+.hand-card:nth-child(5){transform:rotate(5deg) translateY(3px)}
+.hand-card:hover{transform:translateY(-20px) scale(1.08) !important;z-index:20;border-color:#d4874a;box-shadow:0 6px 20px rgba(212,135,74,0.2)}
+.hand-card .cost{position:absolute;top:-4px;left:-4px;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;border:1px solid #0d0d0d}
+.hand-card .h-icon{font-size:16px;margin-top:6px}
+.hand-card .h-name{font-size:6px;color:#d4c9a8;margin-top:2px;text-align:center}
+.battle-btns{display:flex;gap:6px;margin-left:8px}
+.action-btn{padding:6px 12px;border-radius:4px;border:1px solid #6b5540;background:linear-gradient(180deg,#3d3028,#1a1410);color:#d4c9a8;font-size:11px;cursor:pointer;font-family:inherit;transition:all .2s;white-space:nowrap}
+.action-btn:hover{background:linear-gradient(180deg,#5a4538,#2a1f14);border-color:#d4874a}
+.action-btn.atk{background:linear-gradient(180deg,#5a1a1a,#3d0d0d);border-color:#ff475744}
+.action-btn.atk:hover{background:linear-gradient(180deg,#7a2a2a,#5a1a1a);border-color:#ff4757}
+
+/* 移到前面定义了（大UI版本） */
+.battle-hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:14px;color:#d4c9a8;z-index:3;pointer-events:none;opacity:0;transition:all .3s}
+.battle-hint.show{opacity:1;animation:hintPulse 1.5s ease-in-out}
+@keyframes hintPulse{0%{opacity:0;transform:translate(-50%,-50%) scale(.8)}30%{opacity:1;transform:translate(-50%,-50%) scale(1)}70%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-60%) scale(.9)}}
+
+/* ===== NPC形象（遮罩背景装饰）===== */
+.npc-scene{text-align:center;margin-bottom:8px;position:relative;height:60px}
+.npc-scene .npc-icon{font-size:36px;display:inline-block;animation:npcFloat 2s ease-in-out infinite;filter:drop-shadow(0 0 10px rgba(212,135,74,0.2))}
+.npc-scene .npc-label{font-size:9px;color:#8B7D6B;margin-top:2px}
+@keyframes npcFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+
+/* 商店NPC */
+.npc-shop{background:linear-gradient(180deg,rgba(0,180,216,0.05),transparent);border-radius:8px;padding:8px}
+.npc-craft{background:linear-gradient(180deg,rgba(212,135,74,0.05),transparent);border-radius:8px;padding:8px}
+.npc-event{background:linear-gradient(180deg,rgba(167,139,250,0.05),transparent);border-radius:8px;padding:8px}
+.npc-rest{background:linear-gradient(180deg,rgba(132,204,22,0.05),transparent);border-radius:8px;padding:8px}
+
+/* ===== 入口界面（标题屏 + 职业选择）===== */
+.entry-overlay{position:absolute;top:0;left:0;right:0;bottom:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a0a0a;border-radius:10px;overflow:hidden}
+.entry-overlay.hide{display:none}
+#particles{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;font-size:20px;color:rgba(212,135,74,0.15);overflow:hidden}
+#particles span{position:absolute;animation:particleFloat 8s linear infinite;opacity:0}
+@keyframes particleFloat{0%{transform:translateY(110vh) rotate(0deg);opacity:0}10%{opacity:0.3}90%{opacity:0.3}100%{transform:translateY(-10vh) rotate(360deg);opacity:0}}
+.entry-title{font-size:40px;color:#FDE68A;text-shadow:0 0 20px rgba(253,230,138,0.3),0 0 60px rgba(253,230,138,0.1);letter-spacing:6px;margin-bottom:0}
+.entry-sub{font-size:11px;color:#6b5540;letter-spacing:12px;margin-bottom:6px;text-transform:uppercase}
+.entry-divider{width:200px;height:2px;background:linear-gradient(90deg,transparent,#D97706,transparent);margin:10px 0}
+.entry-tagline{font-size:12px;color:#8B7D6B;margin-bottom:20px}
+.diff-group{display:flex;gap:10px;margin-bottom:22px}
+.diff-btn{padding:10px 22px;border-radius:8px;border:2px solid #3d3028;background:#1a1410;color:#8B7D6B;cursor:pointer;text-align:center;transition:all .25s;font-size:12px;min-width:100px;font-family:inherit}
+.diff-btn:hover{border-color:#6b5540}
+.diff-btn .diff-icon{font-size:22px;display:block;margin-bottom:2px}
+.diff-btn .diff-label{font-size:11px;font-weight:600}
+.diff-btn .diff-desc{font-size:8px;color:#6b5540;margin-top:2px}
+.diff-btn.selected-easy{border-color:#84CC16;background:#1a2a0a;box-shadow:0 0 16px rgba(132,204,22,0.2);color:#84CC16}
+.diff-btn.selected-normal{border-color:#F59E0B;background:#2a1a0a;box-shadow:0 0 16px rgba(245,158,11,0.2);color:#F59E0B}
+.diff-btn.selected-hard{border-color:#DC2626;background:#2a0a0a;box-shadow:0 0 16px rgba(220,38,38,0.2);color:#DC2626}
+.entry-start{font-size:16px;padding:12px 40px;border-radius:8px;border:2px solid #FDE68A;background:linear-gradient(180deg,#D97706,#8B4513);color:#fff;cursor:pointer;font-weight:700;letter-spacing:2px;box-shadow:0 0 20px rgba(217,119,6,0.3);transition:all .25s;font-family:inherit}
+.entry-start:hover{transform:translateY(-2px);box-shadow:0 0 30px rgba(217,119,6,0.5)}
+.entry-footer{position:absolute;bottom:12px;font-size:9px;color:#3d3028}
+.job-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:12px 0;max-width:600px;width:90%}
+.job-card{padding:12px 8px;border-radius:10px;border:2px solid #3d3028;background:#1a1410;cursor:pointer;text-align:center;transition:all .25s;font-family:inherit}
+.job-card:hover{transform:translateY(-3px)}
+.job-card .job-icon{font-size:28px;margin-bottom:2px}
+.job-card .job-name{font-size:13px;font-weight:600;margin-bottom:1px}
+.job-card .job-stats{font-size:8px;color:#8B7D6B;margin-bottom:3px}
+.job-card .job-desc{font-size:8px;color:#6b5540;line-height:1.3;margin-bottom:2px}
+.job-card .job-style{display:inline-block;font-size:7px;padding:1px 6px;border-radius:3px;background:#0d0d0d;color:#6b5540;margin-top:2px}
+.job-bar{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:4px;width:90%;max-width:600px}
+.job-bar .sel-info{font-size:11px;color:#8B7D6B;flex:1}
+.job-bar .sel-info b{color:#d4c9a8}
+.job-confirm{padding:10px 32px;border-radius:6px;border:2px solid #6b5540;background:#1a1410;color:#6b5540;font-size:14px;cursor:pointer;font-weight:600;transition:all .25s;font-family:inherit}
+.job-confirm.active{border-color:#D97706;background:linear-gradient(180deg,#3d2a1a,#1a1410);color:#D97706;box-shadow:0 0 16px rgba(217,119,6,0.2)}
+.job-back{position:absolute;top:12px;left:12px;padding:6px 12px;border-radius:4px;border:1px solid #3d3028;background:#1a1410;color:#8B7D6B;cursor:pointer;font-size:10px;font-family:inherit}
+</style>
+</head>
+<body>
+
+<h1>🏰 废铁高塔</h1>
+<div class="sub">选择起点开始 · 虚线换线 · 击败Boss进入下一层</div>
+
+<!-- ===== 入口界面：标题+难度选择 ===== -->
+<div class="entry-overlay" id="entryScreen">
+  <div id="particles"></div>
+  <div style="font-size:48px;margin-bottom:4px">⚙️</div>
+  <div class="entry-title">废铁高塔</div>
+  <div class="entry-sub">SCRAP TOWER</div>
+  <div class="entry-divider"></div>
+  <div class="entry-tagline">🗑️ 在废土中攀登 · 从垃圾里成王</div>
+  <div class="diff-group" id="diffGroup">
+    <div class="diff-btn" onclick="selectDifficulty('easy')" id="diffEasy">
+      <span class="diff-icon">🌱</span>
+      <span class="diff-label" style="color:#84CC16">简单</span>
+      <div class="diff-desc">废料充沛 · 怪物弱化</div>
+    </div>
+    <div class="diff-btn selected-normal" onclick="selectDifficulty('normal')" id="diffNormal">
+      <span class="diff-icon">⚙️</span>
+      <span class="diff-label" style="color:#F59E0B">普通</span>
+      <div class="diff-desc">标准体验 · 推荐</div>
+    </div>
+    <div class="diff-btn" onclick="selectDifficulty('hard')" id="diffHard">
+      <span class="diff-icon">💀</span>
+      <span class="diff-label" style="color:#DC2626">困难</span>
+      <div class="diff-desc">敌人强化 · 精英增多</div>
+    </div>
+  </div>
+  <button class="entry-start" onclick="goToJobSelect()">⚔️ 开始攀登</button>
+  <div class="entry-footer">v1.0.0 · 15层</div>
+</div>
+
+<!-- ===== 入口界面：职业选择 ===== -->
+<div class="entry-overlay hide" id="jobScreen">
+  <button class="job-back" onclick="showEntryScreen()">← 返回</button>
+  <div style="text-align:center;width:100%">
+    <div style="font-size:11px;color:#8B7D6B;margin-bottom:2px" id="jobDiffLabel">⚙️ 普通</div>
+    <div style="font-size:18px;color:#d4874a;font-weight:600;margin-bottom:2px">👤 选择你的职业</div>
+    <div style="font-size:10px;color:#6b5540">每种职业拥有独特的战斗风格</div>
+  </div>
+  <div class="job-grid" id="jobGrid"></div>
+  <div class="job-bar">
+    <div class="sel-info">已选: <b id="jobSelName">—</b></div>
+    <button class="job-confirm" id="jobConfirmBtn" onclick="confirmStart()">⚔️ 确认出发</button>
+  </div>
+</div>
+
+<div class="map-container" id="mapContainer">
+  <div class="map-bg" id="mapBg"></div>
+  <div class="map-top">
+    <div class="left"><span class="zone">🗑️ 垃圾平原</span><span style="color:#666" id="floorLabel">第1层</span></div>
+    <div class="right">
+      <span><span style="color:#666">❤️</span><span class="val" id="sHp">68</span><span style="color:#555">/80</span></span>
+      <span><span style="color:#666">🔩</span><span class="val" id="sScrap">1★×2</span></span>
+      <span><span style="color:#666">💰</span><span class="val" id="sGold">30</span></span>
+      <span><span style="color:#666">⚡</span><span class="val" id="sEnergy">3</span><span style="color:#555">/3</span></span>
+      <span><span style="color:#666">💡</span><span class="val" id="sIdeas">0</span></span>
+    </div>
+  </div>
+
+  <div class="map-body">
+    <svg class="map-svg" id="linesSvg"></svg>
+    <div class="map-grid" id="mapGrid"></div>
+  </div>
+
+  <!-- 战斗覆盖层 -->
+  <div class="battle-overlay" id="battleOverlay">
+    <div class="battle-bg"></div>
+    <div class="battle-scene-bg" id="battleSceneBg"></div>
+    <div class="battle-arena" id="battleArena">
+      <div class="player-unit" id="playerUnit">
+        <div class="float-bar">
+          <span class="float-tag hp" id="pHpTag">❤️ 68</span>
+          <span class="float-tag shield" id="pShieldTag" style="display:none">🛡️ 0</span>
+        </div>
+        <div class="sprite" id="playerSprite">
+          <img id="playerImg" style="width:160px;height:200px;object-fit:contain;image-rendering:pixelated" alt="">
+        </div>
+        <div class="hp-bar-container"><div class="hp-bar-fill player" id="pBar" style="width:85%"></div></div>
+        <div class="shield-bar" id="pShieldBar" style="display:none"><div class="shield-bar-fill" style="width:0%"></div></div>
+        <div class="name" id="playerName">The Scavenger</div>
+      </div>
+      <div class="battle-hint" id="battleHint"></div>
+      <div class="enemy-unit" id="enemyUnit">
+        <div class="float-bar"><span class="float-tag hp" id="eHpTag">❤️ 25</span></div>
+        <div class="sprite" id="enemySprite">
+          <img id="enemyImg" style="width:160px;height:200px;object-fit:contain;image-rendering:pixelated" alt="">
+        </div>
+        <div class="hp-bar-container"><div class="hp-bar-fill enemy" id="eBar" style="width:100%"></div></div>
+        <div class="name" id="enemyName">垃圾史莱姆</div>
+        <div class="intent" id="enemyIntent">⚔️ 攻击 6</div>
+      </div>
+    </div>
+    <div class="battle-footer">
+      <div style="display:flex;align-items:center;width:100%;gap:8px">
+        <div class="energy-section" id="energySection">
+          <div class="energy-pip full">⚡</div>
+          <div class="energy-pip full">⚡</div>
+          <div class="energy-pip full">⚡</div>
+        </div>
+        <div class="hand-section" id="handSection"></div>
+        <div class="battle-info" style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:72px;flex-shrink:0">
+          <span style="font-size:8px;color:#555" id="deckCount">牌库 10</span>
+          <span style="font-size:8px;color:#A78BFA" id="backpackCount">🎒 0</span>
+          <div style="display:flex;gap:2px">
+            <button class="action-btn" onclick="doBackpack()" style="font-size:9px;padding:4px 6px" title="选一张手牌送进背包">🎒</button>
+            <button class="action-btn" onclick="doEndTurn()" style="font-size:9px;padding:4px 6px">⏭️</button>
+          </div>
+        </div>
+      </div>
+      <!-- 道具栏（横向条状） -->
+      <div class="item-bar" style="display:flex;align-items:center;gap:6px;padding:4px 12px;border-top:1px solid #3d3028;width:100%;min-height:34px;margin-top:4px">
+        <span style="font-size:9px;color:#d4874a;flex-shrink:0">🔧道具</span>
+        <div id="itemSlot" style="display:flex;gap:6px;flex:1;justify-content:center;align-items:center"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 结果弹窗 -->
+  <div class="result-overlay" id="resultOverlay">
+    <div class="overlay-bg" id="overlayBg"></div>
+    <div class="overlay-content" id="overlayContent" style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:30px;max-width:520px;width:90%">
+      <div class="result-title" id="resultTitle">🎉 胜利</div>
+      <div class="result-desc" id="resultDesc">获得奖励</div>
+      <button class="result-btn" onclick="closeResult()">继续 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- 状态栏 -->
+<div class="status-bar">
+  <span>❤️ <span class="hp" id="statusHp">68</span>/80</span>
+  <span>🛡️ <span class="shield" id="statusShield">0</span></span>
+  <span>⚡ <span class="energy" id="statusEnergy">3</span>/3</span>
+  <span>🔩 <span class="scrap" id="statusScrap">1★×2</span></span>
+  <span>💰 <span class="gold" id="statusGold">30</span></span>
+  <span>💡 <span class="ideas" id="statusIdeas">0</span></span>
+  <span style="font-size:10px;color:#FFD700;cursor:pointer" id="relicDisplay" onclick="openRelicUI()">🗿 印记</span>
+  <span style="font-size:10px;color:#555" id="laneLabel">选择起点开始</span>
+  <span id="mapHint" style="position:fixed;bottom:12px;left:50%;transform:translateX(-50%);font-size:12px;color:#d4874a;background:rgba(13,13,13,0.9);padding:6px 20px;border-radius:6px;border:1px solid #d4874a44;z-index:100;pointer-events:none;opacity:0;transition:opacity .3s">提示</span>
+  <span id="muteBtn" style="font-size:16px;cursor:pointer;margin-left:auto;user-select:none" onclick="toggleMute()" title="点击开启BGM（浏览器需要点击才能播放音频）">🔊</span>
+</div>
+
+<script>
+// ===== 游戏状态 =====
+const state = {
+  hp: 68, maxHp: 80,
+  shield: 0,
+  energy: 3, maxEnergy: 3,
+  scrap: { 1: 2, 2: 0, 3: 0, 4: 0, 5: 0 },
+  gold: 30,
+  ideas: 0,
+  completed: [],
+  unlocked: ['0_0','0_1','0_2'],
+  col: 0,
+  lane: -1,
+  switches: [],
+  job: 'wrecker',
+  difficulty: 'normal',
+  backpack: [
+    { id:'shank', uid:'sh1', uses:0 },
+    { id:'pipe', uid:'pp1', uses:0 },
+    { id:'grenade', uid:'gr1', uses:0 },
+  ],
+  relics: [null, null, null],
+  floor: 1,
+};
+
+// ===== 楼层/区域系统 =====
+const ZONES = [
+  { id:'trash',  name:'垃圾平原', floors:[1,2],   monsterPool:'trash',  desc:'低层废土，基础怪物' },
+  { id:'metal',  name:'金属森林', floors:[3,4],   monsterPool:'metal',  desc:'钢铁丛林，机械怪物' },
+  { id:'oil',    name:'油海',     floors:[5,6],   monsterPool:'oil',    desc:'原油污染，易燃生物' },
+  { id:'circuit',name:'电路荒漠', floors:[7,8],   monsterPool:'circuit',desc:'电子废土，故障机械' },
+  { id:'forge',  name:'核心熔炉', floors:[9,10],  monsterPool:'forge',  desc:'高温锻造，炎魔横行' },
+  { id:'toxic',  name:'污染深渊', floors:[11,12], monsterPool:'toxic',  desc:'剧毒辐射，变异生态' },
+  { id:'throne', name:'废铁王座', floors:[13,14], monsterPool:'throne', desc:'精英齐聚，王座近在咫尺' },
+];
+
+function getCurrentZone() {
+  return ZONES.find(z => state.floor >= z.floors[0] && state.floor <= z.floors[1]) || ZONES[0];
+}
+
+function getMonsterPoolForFloor() {
+  const zone = getCurrentZone();
+  return zone.monsterPool;
+}
+
+// 路径标签
+const LANE_LABELS = ['↗ 上路','★ 中路','↘ 下路'];
+
+// ===== 像素精灵（死亡细胞风格 - 暗色剪影+发光特征）=====
+const JOB_COLORS = {
+  wrecker:   { body:'#1A1008', accent:'#D97706', glow:'#FF8C00', skin:'#3A2010', belt:'#8B4513' },
+  forger:    { body:'#1A0808', accent:'#FF4500', glow:'#FF6B35', skin:'#3A1810', belt:'#8B2500' },
+  recycler:  { body:'#0A1A0A', accent:'#84CC16', glow:'#A0FF00', skin:'#2A3A10', belt:'#4A6B10' },
+  toxic:     { body:'#0A0A1A', accent:'#A78BFA', glow:'#CC88FF', skin:'#1A103A', belt:'#6B4A8B' },
+  overload:  { body:'#0A0A2A', accent:'#00BFFF', glow:'#66DDFF', skin:'#10203A', belt:'#0A6B8B' },
+  assembler: { body:'#1A1000', accent:'#FFD700', glow:'#FFEE66', skin:'#3A2A00', belt:'#8B7500' },
+};
+const JOB_ITEMS = {
+  wrecker:   { head:'bandana', weapon:'wrench', cape:true },
+  forger:    { head:'helm', weapon:'hammer', cape:false },
+  recycler:  { head:'hood', weapon:'hook', cape:true },
+  toxic:     { head:'mask', weapon:'vial', cape:true },
+  overload:  { head:'goggles', weapon:'staff', cape:false },
+  assembler: { head:'goggles', weapon:'multi', cape:true },
+};
+
+function generateJobSprite(jobKey) {
+  const c = document.createElement('canvas');
+  c.width = 160; c.height = 200;
+  const ctx = c.getContext('2d');
+  const col = JOB_COLORS[jobKey] || JOB_COLORS.wrecker;
+  const items = JOB_ITEMS[jobKey] || JOB_ITEMS.wrecker;
+  ctx.clearRect(0, 0, 160, 200);
+  const px = (x, y, color) => { ctx.fillStyle = color; ctx.fillRect(x, y, 2, 2); };
+  const glow = (x, y, color) => { ctx.shadowColor = color; ctx.shadowBlur = 20; ctx.fillStyle = color; ctx.fillRect(x, y, 4, 4); ctx.shadowBlur = 0; };
+  
+  if (items.cape) {
+    for (let x = 32; x < 128; x++) for (let y = 72; y < 140; y++) px(x, y, '#0A0806');
+    for (let x = 28; x < 132; x++) for (let y = 100; y < 104; y++) px(x, y, col.accent + '33');
+    for (let x = 24; x < 136; x++) for (let y = 138; y < 150; y++) px(x, y, '#0A0806');
+  }
+  for (let x = 54; x < 70; x++) for (let y = 132; y < 164; y++) px(x, y, '#0A0808');
+  for (let x = 90; x < 106; x++) for (let y = 132; y < 164; y++) px(x, y, '#0A0808');
+  for (let x = 50; x < 74; x++) for (let y = 164; y < 184; y++) px(x, y, '#080606');
+  for (let x = 86; x < 110; x++) for (let y = 164; y < 184; y++) px(x, y, '#080606');
+  for (let x = 54; x < 62; x++) for (let y = 134; y < 160; y+=4) px(x, y, col.accent + '44');
+  for (let x = 98; x < 106; x++) for (let y = 134; y < 160; y+=4) px(x, y, col.accent + '44');
+  for (let x = 44; x < 116; x++) for (let y = 64; y < 134; y++) px(x, y, col.body);
+  for (let x = 44; x < 50; x++) for (let y = 66; y < 128; y+=5) px(x, y, col.accent + '55');
+  for (let x = 110; x < 116; x++) for (let y = 66; y < 128; y+=5) px(x, y, col.accent + '55');
+  for (let x = 76; x < 84; x++) for (let y = 70; y < 108; y+=10) px(x, y, col.accent + '66');
+  for (let x = 44; x < 116; x++) for (let y = 118; y < 128; y++) px(x, y, col.belt);
+  for (let x = 76; x < 84; x++) for (let y = 118; y < 128; y++) px(x, y, col.accent);
+  for (let x = 34; x < 44; x++) for (let y = 66; y < 100; y++) px(x, y, col.body);
+  for (let x = 116; x < 126; x++) for (let y = 66; y < 100; y++) px(x, y, col.body);
+  for (let x = 34; x < 44; x++) for (let y = 100; y < 110; y++) px(x, y, col.skin);
+  for (let x = 116; x < 126; x++) for (let y = 100; y < 110; y++) px(x, y, col.skin);
+  
+  // 武器
+  if (items.weapon === 'wrench') {
+    for (let x = 126; x < 150; x++) for (let y = 38; y < 62; y++) px(x, y, '#555');
+    for (let x = 132; x < 144; x++) for (let y = 22; y < 38; y++) px(x, y, '#555');
+    for (let x = 128; x < 134; x++) for (let y = 14; y < 22; y++) px(x, y, '#777');
+    for (let x = 142; x < 148; x++) for (let y = 14; y < 22; y++) px(x, y, '#777');
+    for (let x = 126; x < 132; x++) for (let y = 42; y < 48; y++) px(x, y, col.glow + '66');
+  } else if (items.weapon === 'hammer') {
+    for (let x = 126; x < 154; x++) for (let y = 22; y < 36; y++) px(x, y, '#666');
+    for (let x = 138; x < 144; x++) for (let y = 36; y < 74; y++) px(x, y, '#555');
+    for (let x = 126; x < 132; x++) for (let y = 26; y < 32; y++) px(x, y, col.glow + '55');
+    for (let x = 148; x < 154; x++) for (let y = 26; y < 32; y++) px(x, y, col.glow + '55');
+    for (let x = 138; x < 144; x++) for (let y = 68; y < 74; y++) px(x, y, col.glow);
+  } else if (items.weapon === 'hook') {
+    for (let x = 126; x < 148; x++) for (let y = 46; y < 68; y++) px(x, y, '#555');
+    for (let x = 144; x < 154; x++) for (let y = 38; y < 48; y++) px(x, y, '#666');
+    for (let x = 148; x < 154; x++) for (let y = 48; y < 54; y++) px(x, y, '#666');
+    for (let x = 128; x < 134; x++) for (let y = 48; y < 54; y++) px(x, y, col.glow + '55');
+  } else if (items.weapon === 'vial') {
+    for (let x = 126; x < 144; x++) for (let y = 42; y < 68; y++) px(x, y, col.accent + '88');
+    for (let x = 132; x < 138; x++) for (let y = 32; y < 42; y++) px(x, y, '#555');
+    for (let x = 126; x < 132; x++) for (let y = 44; y < 50; y++) px(x, y, col.glow + '77');
+    for (let x = 132; x < 138; x++) for (let y = 68; y < 76; y++) px(x, y, col.glow + '88');
+  } else if (items.weapon === 'staff') {
+    for (let x = 128; x < 134; x++) for (let y = 22; y < 90; y++) px(x, y, '#444');
+    for (let x = 122; x < 140; x++) for (let y = 12; y < 24; y++) px(x, y, col.accent + '99');
+    for (let x = 126; x < 136; x++) for (let y = 14; y < 22; y++) px(x, y, col.glow);
+    for (let i = 0; i < 4; i++) for (let y = 24; y < 30; y+=2) px(126 + i*4 + (i%2?2:-2), y, col.glow + '66');
+  } else if (items.weapon === 'multi') {
+    for (let x = 126; x < 150; x++) for (let y = 38; y < 62; y++) px(x, y, '#555');
+    for (let x = 150; x < 156; x++) for (let y = 44; y < 54; y++) px(x, y, '#666');
+    for (let x = 122; x < 128; x++) for (let y = 48; y < 54; y++) px(x, y, '#666');
+    for (let x = 128; x < 134; x++) for (let y = 40; y < 48; y++) px(x, y, col.glow + '55');
+  }
+  
+  // 头
+  for (let x = 48; x < 112; x++) for (let y = 12; y < 68; y++) px(x, y, col.skin);
+  
+  if (items.head === 'bandana') {
+    for (let x = 44; x < 116; x++) for (let y = 6; y < 22; y++) px(x, y, '#5A0000');
+    for (let x = 44; x < 50; x++) for (let y = 22; y < 28; y++) px(x, y, '#5A0000');
+    for (let x = 48; x < 54; x++) for (let y = 6; y < 10; y++) px(x, y, '#8B0000');
+    for (let x = 106; x < 112; x++) for (let y = 6; y < 10; y++) px(x, y, '#8B0000');
+    for (let x = 44; x < 116; x+=3) for (let y = 20; y < 22; y++) px(x, y, col.glow + '44');
+  } else if (items.head === 'helm') {
+    for (let x = 42; x < 118; x++) for (let y = 2; y < 28; y++) px(x, y, '#444');
+    for (let x = 44; x < 116; x++) for (let y = 28; y < 34; y++) px(x, y, '#333');
+    for (let x = 42; x < 48; x++) for (let y = 22; y < 28; y++) px(x, y, '#555');
+    for (let x = 112; x < 118; x++) for (let y = 22; y < 28; y++) px(x, y, '#555');
+    for (let x = 50; x < 64; x++) for (let y = 4; y < 8; y++) px(x, y, '#666');
+    for (let x = 96; x < 110; x++) for (let y = 4; y < 8; y++) px(x, y, '#666');
+    for (let x = 76; x < 84; x++) for (let y = 34; y < 38; y++) px(x, y, col.glow + '55');
+  } else if (items.head === 'hood') {
+    for (let x = 42; x < 118; x++) for (let y = 4; y < 26; y++) px(x, y, '#1A1A0A');
+    for (let x = 44; x < 116; x++) for (let y = 26; y < 34; y++) px(x, y, '#1A1A0A');
+    for (let x = 42; x < 48; x++) for (let y = 18; y < 26; y++) px(x, y, '#2A2A1A');
+    for (let x = 112; x < 118; x++) for (let y = 18; y < 26; y++) px(x, y, '#2A2A1A');
+    for (let x = 42; x < 118; x+=3) for (let y = 22; y < 26; y++) px(x, y, col.glow + '33');
+  } else if (items.head === 'mask') {
+    for (let x = 44; x < 116; x++) for (let y = 6; y < 38; y++) px(x, y, '#222');
+    for (let x = 48; x < 112; x++) for (let y = 38; y < 44; y++) px(x, y, '#333');
+    for (let x = 54; x < 66; x++) for (let y = 18; y < 28; y++) { px(x, y, col.glow); glow(x, y, col.glow); }
+    for (let x = 94; x < 106; x++) for (let y = 18; y < 28; y++) { px(x, y, col.glow); glow(x, y, col.glow); }
+    for (let x = 74; x < 86; x++) for (let y = 38; y < 48; y++) px(x, y, '#444');
+  } else if (items.head === 'goggles') {
+    for (let x = 44; x < 116; x++) for (let y = 4; y < 16; y++) px(x, y, '#1A1A2A');
+    for (let x = 54; x < 70; x++) for (let y = 16; y < 32; y++) { px(x, y, col.glow); glow(x, y, col.glow); }
+    for (let x = 90; x < 106; x++) for (let y = 16; y < 32; y++) { px(x, y, col.glow); glow(x, y, col.glow); }
+    for (let x = 74; x < 86; x++) for (let y = 18; y < 22; y++) px(x, y, '#555');
+    for (let x = 50; x < 56; x++) for (let y = 16; y < 32; y++) px(x, y, '#555');
+    for (let x = 104; x < 110; x++) for (let y = 16; y < 32; y++) px(x, y, '#555');
+  }
+  
+  if (items.head !== 'mask' && items.head !== 'goggles') {
+    for (let x = 58; x < 70; x++) for (let y = 22; y < 34; y++) { px(x, y, col.glow); glow(x, y, col.glow); }
+    for (let x = 90; x < 102; x++) for (let y = 22; y < 34; y++) { px(x, y, col.glow); glow(x, y, col.glow); }
+    for (let x = 64; x < 68; x++) for (let y = 28; y < 32; y++) px(x, y, '#000');
+    for (let x = 92; x < 96; x++) for (let y = 28; y < 32; y++) px(x, y, '#000');
+  }
+  return c;
+}
+
+function loadJobSprite(jobKey) {
+  const img = document.getElementById('playerImg');
+  if (!img) return;
+  const canvas = generateJobSprite(jobKey);
+  img.src = canvas.toDataURL();
+}
+
+function loadSprite(imgId, prompt) {
+  const img = document.getElementById(imgId);
+  if (!img) return;
+  if (imgId === 'playerImg') {
+    // 直接用Canvas生成职业精灵，不依赖外部API
+    loadJobSprite(state.job);
+  } else {
+    // 用提示词作为种子生成怪物精灵
+    loadMonsterSprite(prompt || 'default');
+  }
+}
+
+// 根据提示词生成怪物精灵（确定性伪随机）
+function loadMonsterSprite(prompt) {
+  const img = document.getElementById('enemyImg');
+  if (!img) return;
+  let seed = 0;
+  for (let i = 0; i < prompt.length; i++) seed = ((seed << 5) - seed) + prompt.charCodeAt(i);
+  const rng = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+  
+  const c = document.createElement('canvas');
+  c.width = 160; c.height = 200;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, 160, 200);
+  const px = (x, y, color) => { ctx.fillStyle = color; ctx.fillRect(x, y, 2, 2); };
+  
+  const hue = Math.floor(rng() * 360);
+  const darkColor = `hsl(${hue}, 50%, ${15 + rng() * 20}%)`;
+  const midColor = `hsl(${hue}, 60%, ${25 + rng() * 25}%)`;
+  const eyeColor = rng() > 0.5 ? '#FF0' : '#F00';
+  const hasHorns = rng() > 0.5;
+  const hasWings = rng() > 0.5;
+  const bodyW = 28 + Math.floor(rng() * 20);
+  const bodyH = 36 + Math.floor(rng() * 24);
+  const xOff = 66 - Math.floor(bodyW / 2);
+  const yOff = 52 + Math.floor(rng() * 8);
+  
+  for (let x = xOff; x < xOff + bodyW; x++) 
+    for (let y = yOff; y < yOff + bodyH; y++) px(x, y, midColor);
+  for (let x = xOff + 2; x < xOff + bodyW - 2; x++) 
+    for (let y = yOff + 2; y < yOff + 5; y++) px(x, y, darkColor);
+  
+  const eyeY = yOff + Math.floor(bodyH * 0.3);
+  const eW = Math.floor(bodyW * 0.18);
+  for (let x = xOff + Math.floor(bodyW * 0.18); x < xOff + Math.floor(bodyW * 0.18) + eW; x++) 
+    for (let y = eyeY; y < eyeY + 4; y++) px(x, y, eyeColor);
+  for (let x = xOff + Math.floor(bodyW * 0.65); x < xOff + Math.floor(bodyW * 0.65) + eW; x++) 
+    for (let y = eyeY; y < eyeY + 4; y++) px(x, y, eyeColor);
+  const pX1 = xOff + Math.floor(bodyW * 0.22);
+  const pX2 = xOff + Math.floor(bodyW * 0.72);
+  for (let y = eyeY + 1; y < eyeY + 3; y++) { px(pX1, y, '#000'); px(pX2, y, '#000'); }
+  
+  if (hasHorns) {
+    for (let i = 0; i < 4; i++) {
+      px(xOff + Math.floor(bodyW * 0.12) + i, yOff - 3 - i, darkColor);
+      px(xOff + Math.floor(bodyW * 0.78) - i, yOff - 3 - i, darkColor);
+    }
+  }
+  if (hasWings) {
+    for (let i = 0; i < 6; i++) {
+      px(xOff - 3 - i, yOff + 6 + i, darkColor);
+      px(xOff + bodyW + 2 + i, yOff + 6 + i, darkColor);
+    }
+  } else {
+    for (let i = 0; i < 6; i++) {
+      px(xOff - 3, yOff + 6 + i, midColor);
+      px(xOff + bodyW + 2, yOff + 6 + i, midColor);
+    }
+  }
+  
+  const mouthY = yOff + Math.floor(bodyH * 0.6);
+  for (let x = xOff + 3; x < xOff + bodyW - 3; x++) px(x, mouthY, '#F00');
+  for (let x = xOff + 4; x < xOff + bodyW - 4; x += 2) px(x, mouthY + 1, '#F00');
+  
+  img.src = c.toDataURL();
+}
+
+// 保持对外API兼容
+const SPRITE_API = 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image';
+function spriteUrl(prompt) {
+  return SPRITE_API + '?prompt=' + encodeURIComponent(prompt + ', 16-bit pixel art sprite front view full body strict pixel grid no anti-aliasing limited 16 colors plain dark background game character') + '&image_size=square';
+}
+
+// 职业→绘图提示词
+const JOB_PROMPTS = {
+  wrecker:  'wasteland scavenger mechanic brown orange scrap armor holding wrench bandana goggles',
+  forger:   'blacksmith forger red orange molten armor holding hammer sparks flying forge',
+  recycler: 'scavenger recycler green brown armor grappling hook backpack junk wasteland',
+  toxic:    'toxic alchemist purple green gas mask holding vial bubbling poison fumes',
+  overload: 'electric engineer blue cyan spark bolts lightning wrench weapon energy',
+  assembler:'mechanic assembler gold yellow gear parts multi-tool weapon prototype',
+};
+
+// 怪物→绘图提示词（按怪物名索引）
+const MONSTER_PROMPTS = {
+  '废纸箱怪':      'cardboard box golem brown tan scrap material junk creature',
+  '生锈铁桶':      'rusty barrel creature brown orange scrap metal monster',
+  '垃圾虫':        'trash worm grub brown green segmented body waste creature',
+  '破布幽灵':      'ragged cloth specter floating tattered brown gray ethereal ghost',
+  '碎玻璃魔':      'broken glass elemental sharp shining fragile crystal monster',
+  '锈钉魔':        'rusty nail bundle creature sharp metal spikes hazard',
+  '铁刺藤':        'iron thorn vine green metallic spikes dangerous plant monster',
+  '齿轮切割者':    'spinning gear blade creature silver gray sharp teeth mechanical',
+  '锈蚀哨兵':      'rusty sentinel guard broken armor red eye robot soldier',
+  '废品收集者':    'junk collector creature scrap metal arms grabbing claws',
+  '铁皮傀儡':      'scrap metal golem iron slab body heavy stomping construct',
+  '油污泥怪':      'oil sludge blob golden brown viscous dripping slime monster',
+  '焦油蜘蛛':      'tar pitch spider black sticky legs many eyes creepy',
+  '燃油蝙蝠':      'fuel soaked bat flying creature brown golden dripping wings',
+  '油污蛇':        'oil slick snake slippery black golden winding serpent',
+  '冒烟机':        'smoking machine rusted engine puffing black smoke mechanical',
+  '油渍幽灵':      'oil stain ghost translucent black greasy floating specter',
+  '短路电蛇':      'electric circuit serpent blue cyan sparks zigzag snake',
+  '坏路机器人':    'broken circuit malfunctioning robot blue screen error glitch',
+  '电磁幽魂':      'electromagnetic ghost translucent blue static interference floating',
+  '数据腐蚀体':    'data corruption monster glitchy pixels error artifact creature',
+  '焊枪兵':        'welding trooper robot with torch blue sparks metal armor',
+  '逻辑炸弹':      'logic bomb ticking device red numbers circuits unstable',
+  '熔炉炎魔':      'fire forge demon red orange molten lava horns imposing',
+  '火花精灵':      'spark elemental orange yellow floating fiery particle fairy',
+  '铁砧巨像':      'massive anvil golem iron heavy slow crushing construct',
+  '矿渣巨人':      'slag giant molten rock cooling dark gray orange cracks',
+  '烟囱兽':        'chimney beast smokestack back puffing dark cloud creature',
+  '辐射蟑螂':      'mutated radioactive cockroach green glowing purple shell antennae bug',
+  '毒气史莱姆':    'toxic gas slime green purple poisonous bubbling corrosive blob',
+  '虚空凝视者':    'void gazer aberration purple cosmic tentacles floating eye',
+  '腐蚀爬虫':      'corrosion crawler insect green acid dripping melting mandibles',
+  '异变犬':        'mutated hound three eyes slavering teeth radiation glow',
+  '神经寄生体':    'neural parasite brain tentacles host body purple organic',
+  '废铁骑士':      'scrap metal knight armor sword shield imposing elite',
+  '钢铁主教':      'steel bishop robotic clergy staff energy gold trim',
+  '齿轮王后':      'gear queen mechanical elegant spinning blade crown female',
+  '铁锈国王':      'rust king decaying throne crown jewelery once royal',
+  '黑铁战车':      'iron chariot war machine wheels cannon heavy armor',
+  '废铁龙王':      'scrap dragon mechanical wings metal breath construct flying',
+  // Bosses
+  '垃圾之王':      'junk king trash crown scrap throne giant imposing brown gold boss',
+  '铁锈领主':      'rust lord iron crown green metallic giant knight boss',
+  '石油巨兽':      'oil beast massive tar creature golden black dripping multiple eyes boss',
+  '故障主脑':      'malfunctioning mainframe brain circuit tentacles blue electricity boss',
+  '熔炉之主':      'forge lord fire giant lava hammer red orange imposing boss',
+  '虚空之眼':      'void eye aberration purple cosmic tentacles glowing eye boss',
+};
+
+// ===== 废土印记（遗物）=====
+const RELICS = {
+  spring:   { id:'spring', name:'生锈弹簧', icon:'🔩', desc:'每回合多抽1张牌', rarity:'稀有', effect:'draw+1' },
+  oilpump:  { id:'oilpump', name:'黑油泵', icon:'🛢️', desc:'每回合开始获得3护甲', rarity:'稀有', effect:'startShield+3' },
+  welder:   { id:'welder', name:'焊接面罩', icon:'🎭', desc:'连锁加成翻倍', rarity:'传说', effect:'comboX2' },
+  magnet:   { id:'magnet', name:'电磁铁', icon:'🧲', desc:'战斗结束多获得1废料', rarity:'普通', effect:'extraScrap+1' },
+  gear:     { id:'gear', name:'生锈齿轮', icon:'⚙️', desc:'每次出牌有30%不消耗能量', rarity:'稀有', effect:'energySave30' },
+  filter:   { id:'filter', name:'油污滤芯', icon:'💧', desc:'战斗中每回合首次出牌不消耗能量', rarity:'稀有', effect:'firstFree' },
+  diode:    { id:'diode', name:'二极管', icon:'💡', desc:'过载(能量卡)效果翻倍', rarity:'传说', effect:'surgeX2' },
+  chain:    { id:'chain', name:'铁锁链', icon:'⛓️', desc:'连锁上限+2(最高10层)', rarity:'普通', effect:'comboMax+2' },
+  scrapbag: { id:'scrapbag', name:'废料袋', icon:'👜', desc:'背包+2容量', rarity:'普通', effect:'backpack+2' },
+};
+
+// ===== 场景背景图 =====
+const SCENE_BG = {
+  battle:     'post-apocalyptic wasteland battlefield junk scrap heaps ruins dark sky destroyed buildings toxic haze gritty grimy background',
+  'battle-trash':  'post-apocalyptic garbage waste dump trash piles scrap metal rusty junk overgrown weeds dark cloudy battle grit grime background',
+  'battle-metal':  'post-apocalyptic metal forest iron trees rusted gears machinery scrap jungle green metallic corrosion industrial ruins battle background',
+  'battle-oil':    'post-apocalyptic oil sea dark crude petroleum pools golden toxic fumes refinery ruins fire barrels battle background',
+  'battle-circuit':'post-apocalyptic circuit desert broken electronics wires sparks blue electric dead machines barren wasteland battle background',
+  'battle-forge':  'post-apocalyptic core forge molten furnace red orange lava heat industrial inferno smithy destroyed battle background',
+  'battle-toxic':  'post-apocalyptic toxic waste purple green radiation glow mutated swamp poisonous contaminated waste battle background',
+  'battle-throne': 'post-apocalyptic scrap throne room rusted crown metal debris dark imposing final chamber eerie glow battle background',
+  'battle-boss':   'post-apocalyptic epic boss arena red glow massive chains scrap metal throne dark imposing final battle dramatic background',
+  shop:    'post-apocalyptic scrap market stall rusty metal shelves junk items dim light underground bunker trader background',
+  craft:   'post-apocalyptic blacksmith workshop forge fire anvil tools scrap metal warm glow dark industrial ruined background',
+  gacha:   'post-apocalyptic junk pile garbage dump random scrap parts glowing objects hidden treasures waste pit background',
+  merchant:'post-apocalyptic wasteland road wandering trader cart supplies desert ruins lonely path dangerous background',
+  legend:  'post-apocalyptic ancient library ruined data center glowing screens holographic records fallen civilization dark background',
+  rest:    'post-apocalyptic campfire wasteland night sky stars glowing embers survivors resting peaceful dark gritty background',
+  unknown: 'post-apocalyptic dark tunnel scrap ventilation shafts mysterious glow hidden passage industrial ruins background',
+  boss:    'post-apocalyptic massive throne room scrap metal crown dark imposing boss arena red glow chains background',
+  // 地图背景（废土朋克风格 - 最外层UI）
+   'map-trash':  'post-apocalyptic wasteland junk scrap heaps rusted metal garbage dump dark cloudy sky dilapidated ruins abandoned factory chimneys toxic haze wide panoramic landscape background dark gritty grimy',
+   'map-metal':  'post-apocalyptic metal forest rusted iron machinery overgrown with vines scrap metal trees gears industrial ruins abandoned factory dark green metallic corrosion wide panoramic landscape background dark gritty',
+   'map-oil':    'post-apocalyptic oil refinery ruins dark crude petroleum pools toxic sludge leaking pipes golden brown smog fire barrels hazardous waste wide panoramic landscape background dark gritty',
+   'map-circuit':'post-apocalyptic circuit wasteland broken electronics scattered computer parts rusted wires sparks abandoned data center dead machines blue glow wide panoramic landscape dark gritty',
+   'map-forge':  'post-apocalyptic forge factory ruins molten metal flows rusted furnaces red orange glow slag heaps broken anvils industrial devastation fire wide panoramic landscape dark gritty',
+   'map-toxic':  'post-apocalyptic toxic swamp purple green glowing waste mutated plants dead trees poisonous gas clouds radiation barrels contaminated water wide panoramic landscape dark gritty',
+   'map-throne':'post-apocalyptic throne room rusted metal scrap throne broken crown debris dim red glow twisted metal wires hanging chains oppressive atmosphere wide panoramic dark gritty',
+};
+
+function sceneBgUrl(type) {
+  const prompt = SCENE_BG[type] || SCENE_BG.battle;
+  return SPRITE_API + '?prompt=' + encodeURIComponent('16-bit pixel art ' + prompt + ', game background scene, wide landscape, dark wasteland atmosphere, strict pixel grid') + '&image_size=landscape_16_9';
+}
+
+function showOverlay(content, bgType) {
+  const overlay = document.getElementById('resultOverlay');
+  const bg = document.getElementById('overlayBg');
+  
+  if (bgType && SCENE_BG[bgType]) {
+    const url = sceneBgUrl(bgType);
+    overlay.style.backgroundImage = `url(${url})`;
+    overlay.classList.add('has-bg');
+    overlay.classList.remove('no-bg');
+    bg.style.backgroundImage = `url(${url})`;
+    // 强行预加载
+    const img = new Image();
+    img.src = url;
+  } else {
+    overlay.style.backgroundImage = '';
+    overlay.classList.remove('has-bg');
+    overlay.classList.add('no-bg');
+    bg.style.backgroundImage = '';
+  }
+  
+  document.getElementById('resultTitle').textContent = '';
+  document.getElementById('resultDesc').innerHTML = content;
+  overlay.classList.add('show');
+}
+
+// ===== 设置地图最外层UI背景 =====
+function setMapBg(zoneKey) {
+  const bgEl = document.getElementById('mapBg');
+  if (!bgEl) return;
+  const mapBgKey = 'map-' + zoneKey;
+  const prompt = SCENE_BG[mapBgKey];
+  if (prompt) {
+    const url = SPRITE_API + '?prompt=' + encodeURIComponent('16-bit pixel art ' + prompt + ', wide landscape game background, dark wasteland atmosphere, strict pixel grid') + '&image_size=landscape_16_9';
+    bgEl.style.backgroundImage = `url(${url})`;
+    // 预加载
+    const img = new Image();
+    img.src = url;
+  }
+}
+
+// ===== 虚线随机生成（每层最多5条，保证上中下联通）=====
+function generateSwitches() {
+  const cols = [1,2,3,4,5,6]; // 列1~6可用
+  const count = 3 + Math.floor(Math.random() * 3); // 3~5条
+  // 洗牌取前count个
+  const shuffled = [...cols].sort(() => Math.random() - 0.5);
+  const picked = shuffled.slice(0, count).sort((a,b) => a-b);
+  
+  const result = [];
+  // 保证上↔中 和 中↔下 至少各一条
+  const firstUp = picked[Math.floor(Math.random() * picked.length)];
+  result.push({ col: firstUp, type: 'up-mid' });
+  let secondMid;
+  do { secondMid = picked[Math.floor(Math.random() * picked.length)]; } while (secondMid === firstUp);
+  result.push({ col: secondMid, type: 'mid-low' });
+  
+  // 剩余的随机分配
+  const remain = picked.filter(c => c !== firstUp && c !== secondMid);
+  for (const col of remain) {
+    result.push({ col, type: Math.random() < 0.5 ? 'up-mid' : 'mid-low' });
+  }
+  
+  return result;
+}
+
+// ===== 40种怪物数据库 =====
+const MONSTERS = {
+  trash: [
+    { id:'废纸箱怪', icon:'🗑️', hp:20, atk:5, zone:'垃圾平原' },
+    { id:'生锈铁桶', icon:'🛢️', hp:22, atk:6, zone:'垃圾平原' },
+    { id:'垃圾虫', icon:'🐛', hp:18, atk:4, zone:'垃圾平原' },
+    { id:'破布幽灵', icon:'👻', hp:20, atk:7, zone:'垃圾平原' },
+  ],
+  metal: [
+    { id:'铁刺藤', icon:'🌿', hp:28, atk:7, zone:'金属森林' },
+    { id:'齿轮切割者', icon:'⚙️', hp:30, atk:9, zone:'金属森林' },
+    { id:'锈蚀哨兵', icon:'🗿', hp:35, atk:8, zone:'金属森林' },
+  ],
+  oil: [
+    { id:'油污泥怪', icon:'🧟', hp:35, atk:8, zone:'油海' },
+    { id:'焦油蜘蛛', icon:'🕷️', hp:30, atk:10, zone:'油海' },
+    { id:'燃油蝙蝠', icon:'🦇', hp:25, atk:12, zone:'油海' },
+  ],
+  circuit: [
+    { id:'短路电蛇', icon:'⚡', hp:30, atk:11, zone:'电路荒漠' },
+    { id:'坏路机器人', icon:'🤖', hp:40, atk:10, zone:'电路荒漠' },
+  ],
+  forge: [
+    { id:'熔炉炎魔', icon:'🔥', hp:50, atk:14, zone:'核心熔炉' },
+    { id:'火花精灵', icon:'✨', hp:35, atk:16, zone:'核心熔炉' },
+  ],
+  toxic: [
+    { id:'辐射蟑螂', icon:'🪳', hp:40, atk:16, zone:'污染深渊' },
+  ],
+  throne: [
+    { id:'废铁骑士', icon:'⚔️', hp:80, atk:17, zone:'废铁王座' },
+  ],
+};
+
+const BOSSES = [
+  { id:'垃圾之王', icon:'👑', hp:200, atk:12, zone:'垃圾平原' },
+];
+
+function pickMonster(poolKey) {
+  const pool = MONSTERS[poolKey] || MONSTERS.trash;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+// ===== 地图数据 =====
+// 7列 x 3路 + Boss列
+// 节点: { id, type, icon, label, monster?, elite?, shopType?, eventType? }
+// ===== 动态地图生成（每层随机布局）=====
+function generateMapData() {
+  const zone = getCurrentZone();
+  const pool = zone.monsterPool;
+  const isLastZone = state.floor >= 14;
+  const bossLabel = isLastZone ? '💀 虚空之眼' : '👑 区域Boss';
+  const bossId = isLastZone ? 'final_boss' : 'zone_boss';
+  const nodeTypes = ['battle','battle','shop','craft','event','unknown','rest','battle','elite','battle'];
+  
+  function pickNodeType() { return nodeTypes[Math.floor(Math.random() * nodeTypes.length)]; }
+  
+  const cols = [];
+  for (let ci = 1; ci <= 6; ci++) {
+    const colNodes = [];
+    const usedTypes = new Set();
+    for (let lane = 0; lane < 3; lane++) {
+      let type = pickNodeType();
+      let attempts = 0;
+      while (attempts < 5 && ((type === 'elite' && ci < 5) || usedTypes.has(type) && (type === 'elite' || type === 'shop' || type === 'craft'))) {
+        type = pickNodeType(); attempts++;
+      }
+      usedTypes.add(type);
+      const node = { id:`n${ci}_${lane}`, lane, type };
+      if (type === 'battle' || type === 'elite') {
+        node.icon = type === 'elite' ? '💀' : '⚔️';
+        node.label = type === 'elite' ? '精英' : '战斗';
+        node.monster = pool;
+        if (type === 'elite') node.elite = true;
+      } else if (type === 'shop') {
+        node.icon = '🛒'; node.label = '商店';
+        node.shopType = Math.random() < 0.2 ? 'shady' : 'normal';
+      } else if (type === 'craft') { node.icon = '🔧'; node.label = '工匠';
+      } else if (type === 'event') {
+        const events = ['gacha','merchant','legend'];
+        node.eventType = events[Math.floor(Math.random() * events.length)];
+        node.icon = node.eventType === 'gacha' ? '🎰' : (node.eventType === 'merchant' ? '🏪' : '📜');
+        node.label = node.eventType === 'gacha' ? '抽奖' : (node.eventType === 'merchant' ? '商人' : '传闻');
+      } else if (type === 'unknown') { node.icon = '❔'; node.label = '未知';
+      } else if (type === 'rest') { node.icon = '🏕️'; node.label = '篝火'; }
+      colNodes.push(node);
+    }
+    cols.push(colNodes);
+  }
+  return [
+    [{ id:'s0_0', type:'start', icon:'🏁', label:'起点·上', lane:0 },
+     { id:'s0_1', type:'start', icon:'🏁', label:'起点·中', lane:1 },
+     { id:'s0_2', type:'start', icon:'🏁', label:'起点·下', lane:2 }],
+    ...cols,
+    [{ id:bossId, type:'boss', icon:'👑', label:bossLabel, isBoss:true, lane:-1 }],
+  ];
+}
+
+let MAP_DATA = generateMapData();
+
+// ===== 地图构建 =====
+function buildMap() {
+  // 刷新地图数据（按当前楼层）
+  MAP_DATA = generateMapData();
+  state.switches = generateSwitches();
+  
+  // 更新区域标题和楼层
+  const zone = getCurrentZone();
+  const zoneIcons = {trash:'🗑️',metal:'🌿',oil:'🛢️',circuit:'⚡',forge:'🔥',toxic:'☠️',throne:'👑'};
+  document.querySelector('.map-top .left .zone').textContent = `${zoneIcons[zone.id]||'🗑️'} ${zone.name}`;
+  document.getElementById('floorLabel').textContent = `第${state.floor}层`;
+  setMapBg(zone.id);
+  // BGM在用户点击🔊按钮后激活
+  
+  const grid = document.getElementById('mapGrid');
+  grid.innerHTML = '';
+
+  MAP_DATA.forEach((col, ci) => {
+    const colDiv = document.createElement('div');
+    colDiv.className = 'mcol';
+
+    // 列号
+    const num = document.createElement('div');
+    num.className = 'col-num';
+    num.textContent = ci === MAP_DATA.length - 1 ? '👑' : `${ci+1}`;
+    colDiv.appendChild(num);
+
+    const laneRow = document.createElement('div');
+    laneRow.className = 'lane-row';
+
+    // Boss列特殊处理
+    const isBossCol = ci === MAP_DATA.length - 1;
+    
+    if (isBossCol) {
+      // Boss列：居中显示一个Boss节点
+      const bossNode = col[0];
+      // 添加占位
+      for (let p = 0; p < 2; p++) {
+        const empty = document.createElement('div');
+        empty.style.width = '54px';
+        empty.style.height = '24px';
+        empty.style.visibility = 'hidden';
+        laneRow.appendChild(empty);
+      }
+      const bossKey = `${ci}_0`;
+      const isBossDone = state.completed.includes(bossNode.id);
+      const isBossUnlocked = state.unlocked.includes(bossKey);
+      const el = document.createElement('div');
+      let cls = 'mnode n-boss';
+      if (isBossDone) cls += ' done';
+      else if (isBossUnlocked) cls += ' unlocked current';
+      else cls += ' locked';
+      el.className = cls;
+      el.textContent = bossNode.icon;
+      el.dataset.id = bossNode.id;
+      el.dataset.col = ci;
+      el.dataset.lane = 'boss';
+      const lbl = document.createElement('div');
+      lbl.className = 'mlbl';
+      lbl.textContent = bossNode.label;
+      el.appendChild(lbl);
+      if (isBossUnlocked && !isBossDone) {
+        el.addEventListener('click', () => onNodeClick(bossNode, ci, 0));
+      }
+      laneRow.appendChild(el);
+      for (let p = 0; p < 2; p++) {
+        const empty = document.createElement('div');
+        empty.style.width = '54px';
+        empty.style.height = '24px';
+        empty.style.visibility = 'hidden';
+        laneRow.appendChild(empty);
+      }
+    } else {
+      // 遍历三路
+      for (let lane = 0; lane < 3; lane++) {
+        const node = col.find(n => n.lane === lane);
+        
+        // 路径标签（只在第一列显示）
+        if (ci === 0) {
+          const tag = document.createElement('div');
+          tag.className = 'lane-tag';
+          tag.style.position = 'relative';
+          tag.style.height = '14px';
+          tag.style.fontSize = '9px';
+          tag.style.color = lane === 1 ? '#d4874a' : '#8B7D6B';
+          tag.textContent = LANE_LABELS[lane];
+          laneRow.appendChild(tag);
+        }
+
+        if (node) {
+          // 渲染节点
+          const el = document.createElement('div');
+          el.className = getNodeClass(node, ci, lane);
+          el.textContent = node.icon;
+          el.dataset.id = node.id;
+          el.dataset.col = ci;
+          el.dataset.lane = lane;
+
+          // 标签
+          const lbl = document.createElement('div');
+          lbl.className = 'mlbl';
+          lbl.textContent = node.label;
+          el.appendChild(lbl);
+
+          // 点击事件
+          if (isNodeClickable(node, ci, lane)) {
+            el.addEventListener('click', () => onNodeClick(node, ci, lane));
+          }
+
+          laneRow.appendChild(el);
+        } else {
+          // 没有节点的位置占位
+          const empty = document.createElement('div');
+          empty.style.width = '54px';
+          empty.style.height = '54px';
+          empty.style.visibility = 'hidden';
+          laneRow.appendChild(empty);
+        }
+
+        // 纵向虚线（只渲染state.switches中定义的换线点）
+        if (lane < 2) {
+          const switchType = lane === 0 ? 'up-mid' : 'mid-low';
+          const hasSwitch = state.switches.some(s => s.col === ci && s.type === switchType);
+          
+          // 加占位保持布局
+          const vs = document.createElement('div');
+          vs.className = 'vswitch';
+          
+          if (!hasSwitch) {
+            vs.classList.add('locked');
+            vs.style.cursor = 'default';
+            const vline = document.createElement('div');
+            vline.className = 'vline';
+            vline.style.borderColor = '#1a1a1a';
+            vs.appendChild(vline);
+          } else {
+            const fromLane = lane;
+            const toLane = lane + 1;
+            
+            // 检查两个方向是否有节点
+            const nodeA = col.find(n => n.lane === fromLane);
+            const nodeB = col.find(n => n.lane === toLane);
+            if (!nodeA || !nodeB) vs.classList.add('locked');
+
+            // 判断是否可换线
+            const canSwitch = canLaneSwitch(ci, fromLane, toLane);
+            if (!canSwitch) vs.classList.add('locked');
+
+            const vline = document.createElement('div');
+            vline.className = 'vline';
+            vs.appendChild(vline);
+
+            const vhint = document.createElement('div');
+            vhint.className = 'vhint r';
+            vhint.textContent = canSwitch ? '🔀 换线 (3❤️/5💰)' : '🔒 不可换线';
+            vs.appendChild(vhint);
+
+            if (canSwitch) {
+              vs.addEventListener('click', () => doLaneSwitch(ci, fromLane, toLane));
+            }
+          }
+
+          laneRow.appendChild(vs);
+        }
+      }
+    }
+
+    colDiv.appendChild(laneRow);
+    grid.appendChild(colDiv);
+  });
+
+  drawConnections();
+  updateStatus();
+}
+
+function getNodeClass(node, ci, lane) {
+  const isDone = state.completed.includes(node.id);
+  const isUnlocked = state.unlocked.includes(`${ci}_${lane}`);
+  const isCurrent = isUnlocked && !isDone;
+  let cls = 'mnode';
+
+  if (isDone) cls += ' done';
+  else if (isCurrent) cls += ' unlocked current';
+  else cls += ' locked';
+
+  if (node.isBoss) cls += ' n-boss';
+  else if (node.type === 'start') cls += ' n-start';
+  else if (node.elite) cls += ' n-elite';
+  else if (node.type === 'shop') cls += ' n-shop';
+  else if (node.type === 'event') cls += ' n-event';
+  else if (node.type === 'craft') cls += ' n-craft';
+  else if (node.type === 'unknown') cls += ' n-unknown';
+  else if (node.type === 'rest') cls += ' n-rest';
+
+  return cls;
+}
+
+function isNodeClickable(node, ci, lane) {
+  if (state.completed.includes(node.id)) return false;
+  return state.unlocked.includes(`${ci}_${lane}`);
+}
+
+// 判断是否可换线
+function canLaneSwitch(ci, fromLane, toLane) {
+  // Boss列不可换线
+  if (ci >= MAP_DATA.length - 1) return false;
+  // 只能换当前列
+  if (ci !== state.col) return false;
+  
+  const nodeFrom = MAP_DATA[ci].find(n => n.lane === fromLane);
+  const nodeTo = MAP_DATA[ci].find(n => n.lane === toLane);
+  if (!nodeFrom || !nodeTo) return false;
+  
+  const toDone = state.completed.includes(nodeTo.id);
+  const toUnlocked = state.unlocked.includes(`${ci}_${toLane}`);
+  const fromUnlocked = state.unlocked.includes(`${ci}_${fromLane}`);
+
+  // 目标已解锁或已完成 → 不需要换线
+  if (toDone || toUnlocked) return false;
+  // 源节点必须已解锁（玩家当前在这个位置）
+  if (!fromUnlocked) return false;
+  
+  return true;
+}
+
+// 换线
+function doLaneSwitch(ci, fromLane, toLane) {
+  if (state.hp < 3 && state.gold < 5) {
+    showMapHint('❤️或💰不足，无法换线！');
+    return;
+  }
+
+  const costHp = 3;
+  const costGold = 5;
+  
+  if (state.hp >= costHp) {
+    state.hp -= costHp;
+  } else if (state.gold >= costGold) {
+    state.gold -= costGold;
+  } else {
+    showMapHint('需要 3❤️ 或 5💰 来换线！');
+    return;
+  }
+
+  // 解锁目标节点
+  const targetId = `${ci}_${toLane}`;
+  if (!state.unlocked.includes(targetId)) {
+    state.unlocked.push(targetId);
+  }
+  state.lane = toLane;
+
+  showMapHint(`🔀 切换到${LANE_LABELS[toLane]}！`);
+  buildMap();
+}
+
+// 水平连接线（SVG）
+function drawConnections() {
+  const svg = document.getElementById('linesSvg');
+  svg.innerHTML = '';
+  
+  const grid = document.getElementById('mapGrid');
+  const cols = grid.querySelectorAll('.mcol');
+  if (cols.length < 2) return;
+
+  // 对每列每路，画到下一列同路的连线
+  for (let ci = 0; ci < MAP_DATA.length - 1; ci++) {
+    for (let lane = 0; lane < 3; lane++) {
+      const fromNode = MAP_DATA[ci].find(n => n.lane === lane);
+      const toNode = MAP_DATA[ci + 1].find(n => n.lane === lane);
+      if (!fromNode || !toNode) continue;
+
+      const fromEl = cols[ci]?.querySelector(`[data-id="${fromNode.id}"]`);
+      const toEl = cols[ci + 1]?.querySelector(`[data-id="${toNode.id}"]`);
+      if (!fromEl || !toEl) continue;
+
+      const fRect = fromEl.getBoundingClientRect();
+      const tRect = toEl.getBoundingClientRect();
+      const gridRect = grid.getBoundingClientRect();
+
+      const x1 = fRect.right - gridRect.left - 2;
+      const y1 = fRect.top + fRect.height / 2 - gridRect.top;
+      const x2 = tRect.left - gridRect.left + 2;
+      const y2 = tRect.top + tRect.height / 2 - gridRect.top;
+
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x1);
+      line.setAttribute('y1', y1);
+      line.setAttribute('x2', x2);
+      line.setAttribute('y2', y2);
+      line.setAttribute('stroke', '#3d3028');
+      line.setAttribute('stroke-width', '2');
+      line.setAttribute('opacity', '0.35');
+      svg.appendChild(line);
+    }
+  }
+  
+  svg.setAttribute('width', grid.scrollWidth + 50);
+  svg.setAttribute('height', grid.scrollHeight + 50);
+}
+
+let currentNonBattleNode = null; // { node, lane } 非战斗节点完成后自动推进
+
+// ===== 节点点击 =====
+
+// 难度倍率
+function diffMult() {
+  const d = state.difficulty || 'normal';
+  if (d === 'easy') return { enemyHp: 0.7, enemyAtk: 0.7, gold: 1.5, scrap: 1.5, heal: 1.3 };
+  if (d === 'hard') return { enemyHp: 1.35, enemyAtk: 1.35, gold: 0.7, scrap: 0.7, heal: 0.8 };
+  return { enemyHp: 1, enemyAtk: 1, gold: 1, scrap: 1, heal: 1 };
+}
+
+function onNodeClick(node, ci, lane) {
+  if (state.completed.includes(node.id)) return;
+
+  // 如果是起点(start)，锁定其他起点，开始战斗
+  if (node.type === 'start') {
+    // 锁定其他起点
+    for (const n of MAP_DATA[0]) {
+      if (n.id !== node.id && !state.completed.includes(n.id)) {
+        state.completed.push(n.id);
+      }
+    }
+    state.lane = lane;
+    const monster = pickMonster('trash');
+    startBattleWith(monster, node, false);
+    return;
+  }
+
+  // 非起点节点 - 使用当前楼层的怪物池
+  if (node.type === 'battle' || node.type === 'elite') {
+    const isElite = node.elite;
+    let monster;
+    const poolKey = node.monster || getMonsterPoolForFloor();
+      monster = pickMonster(poolKey);
+      // 按楼层缩放（每层+10%HP +8%ATK）
+      let floorScale = 1 + (state.floor - 1) * 0.1;
+      let atkScale = 1 + (state.floor - 1) * 0.08;
+      const dm = diffMult();
+      floorScale *= dm.enemyHp;
+      atkScale *= dm.enemyAtk;
+      monster = { ...monster, hp: Math.floor(monster.hp * floorScale), atk: Math.floor(monster.atk * atkScale) };
+      if (isElite) {
+        monster = { ...monster, hp: Math.floor(monster.hp * 1.6), atk: Math.floor(monster.atk * 1.4) };
+      }
+      // 总是弹出背包选择界面
+      openBackpackSelect((chosen) => {
+        state._pendingBattleItems = chosen;
+        startBattleWith(monster, node, isElite);
+      });
+  } else if (node.type === 'boss') {
+    const boss = BOSSES[0];
+    const dm = diffMult();
+    let bScale = 1 + (state.floor - 1) * 0.12;
+    bScale *= dm.enemyHp;
+    const scaled = { ...boss, isBoss: true, hp: Math.floor(boss.hp * bScale), atk: Math.floor(boss.atk * bScale * dm.enemyAtk) };
+    openBackpackSelect((chosen) => {
+      state._pendingBattleItems = chosen;
+      startBattleWith(scaled, node, true);
+    });
+  } else if (node.type === 'shop') {
+    currentNonBattleNode = { node, lane };
+    openShop(node);
+  } else if (node.type === 'event') {
+    currentNonBattleNode = { node, lane };
+    openEvent(node);
+  } else if (node.type === 'craft') {
+    currentNonBattleNode = { node, lane };
+    openCraft(node);
+  } else if (node.type === 'unknown') {
+    currentNonBattleNode = { node, lane };
+    openUnknown(node);
+  } else if (node.type === 'rest') {
+    currentNonBattleNode = { node, lane };
+    openRest(node);
+  }
+}
+
+// ===== 卡牌系统 =====
+const CARD_DB = {
+  strike:   { id:'strike', name:'打击', cost:1, type:'attack', icon:'⚔️', damage:6, desc:'造成6点伤害', color:'#ff4757' },
+  defend:   { id:'defend', name:'防御', cost:1, type:'skill', icon:'🛡️', shield:5, desc:'获得5点护甲', color:'#00b4d8' },
+  recycle:  { id:'recycle', name:'回收', cost:1, type:'skill', icon:'♻️', heal:2, desc:'恢复2点生命', color:'#70e000' },
+  heavy:    { id:'heavy', name:'重击', cost:2, type:'attack', icon:'💥', damage:12, desc:'造成12点伤害', color:'#ff4757' },
+  ironwall: { id:'ironwall', name:'铁壁', cost:2, type:'skill', icon:'🧱', shield:10, desc:'获得10点护甲', color:'#00b4d8' },
+  spark:    { id:'spark', name:'火花', cost:0, type:'attack', icon:'⚡', damage:3, desc:'造成3点伤害', color:'#FFD700' },
+  repair:   { id:'repair', name:'修复', cost:1, type:'skill', icon:'💊', heal:4, desc:'恢复4点生命', color:'#84CC16' },
+  surge:    { id:'surge', name:'过载', cost:0, type:'power', icon:'🔥', desc:'获得1点能量', color:'#d4874a' },
+  scavenge: { id:'scavenge', name:'拾荒', cost:1, type:'skill', icon:'🔍', scrap:1, desc:'获得1★废料', color:'#A78BFA' },
+  // ===== 道具卡（比基础卡强，有断裂风险）=====
+  shank:    { id:'shank', name:'铁片刃', cost:0, type:'attack', icon:'🔪', damage:6, desc:'6伤害·道具1★', color:'#d4874a', item:true, star:1 },
+  pipe:     { id:'pipe', name:'钢管', cost:1, type:'attack', icon:'🔧', damage:10, desc:'10伤害·道具1★', color:'#d4874a', item:true, star:1 },
+  plate:    { id:'plate', name:'铁皮甲', cost:1, type:'skill', icon:'🛡️', shield:8, desc:'8护甲·道具1★', color:'#d4874a', item:true, star:1 },
+  coil:     { id:'coil', name:'弹簧拳套', cost:1, type:'attack', icon:'💪', damage:14, desc:'14伤害·道具2★', color:'#FF6B35', item:true, star:2 },
+  shield:   { id:'shield', name:'废铁盾', cost:2, type:'skill', icon:'🛡️', shield:14, desc:'14护甲·道具2★', color:'#FF6B35', item:true, star:2 },
+  blade:    { id:'blade', name:'锯齿刃', cost:2, type:'attack', icon:'🗡️', damage:18, desc:'18伤害·道具3★', color:'#FF4500', item:true, star:3 },
+  armor:    { id:'armor', name:'钢甲板', cost:2, type:'skill', icon:'🧱', shield:20, desc:'20护甲·道具3★', color:'#FF4500', item:true, star:3 },
+  drill:    { id:'drill', name:'电钻', cost:2, type:'attack', icon:'🔩', damage:26, desc:'26伤害·道具4★', color:'#FF0000', item:true, star:4 },
+  fortress: { id:'fortress', name:'堡垒甲', cost:3, type:'skill', icon:'🏰', shield:30, desc:'30护甲·道具4★', color:'#FF0000', item:true, star:4 },
+  // ===== 消耗品 =====
+  grenade:  { id:'grenade', name:'破片雷', cost:1, type:'attack', icon:'💣', damage:15, desc:'15伤害·消耗品', color:'#ff4757', consumable:true },
+  medkit:   { id:'medkit', name:'急救包', cost:1, type:'skill', icon:'💉', heal:10, desc:'恢复10生命·消耗品', color:'#84CC16', consumable:true },
+  battery:  { id:'battery', name:'电池包', cost:0, type:'power', icon:'🔋', desc:'+2能量·消耗品', color:'#FFD700', consumable:true },
+};
+
+function getStartDeck() {
+  const d = [];
+  for (let i = 0; i < 4; i++) d.push({ ...CARD_DB.strike, uid: `s${i}` });
+  for (let i = 0; i < 3; i++) d.push({ ...CARD_DB.defend, uid: `d${i}` });
+  d.push({ ...CARD_DB.recycle, uid: 'r0' });
+  return d;
+}
+
+// 初始化道具栏：从背包取出道具/消耗品
+function getBattleItems() {
+  return (state.backpack || []).map(c => {
+    const template = CARD_DB[c.id];
+    return { ...template, uid: c.uid || c.id + '_' + Date.now(), usedThisBattle: false, uses: c.uses || 0 };
+  });
+}
+
+// 战斗结束后将道具写回背包（保留未带出战的道具）
+function saveBackpackItems(items) {
+  if (!items || items.length === 0) return;
+  
+  // 按 uid 记录战斗中道具的变化
+  const updated = {};
+  items.forEach(c => {
+    // 消耗品用完消失 | 炸毁（star<=0）消失
+    if (c.consumable || (c.star !== undefined && c.star <= 0)) {
+      updated[c.uid] = null;
+    } else {
+      updated[c.uid] = { id: c.id, uid: c.uid, uses: c.uses || 0 };
+    }
+  });
+
+  // 合并：未出战的保留原样，出战的用更新后的替换
+  state.backpack = (state.backpack || []).map(item => {
+    if (item.uid && Object.hasOwn(updated, item.uid)) {
+      return updated[item.uid]; // null = 消失, object = 更新
+    }
+    return item; // 没带出战的保留
+  }).filter(Boolean); // 去掉 null
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+let drawPile = [];
+let hand = [];
+let discardPile = [];
+let backpack = []; // 战斗中送进背包的牌（本场不再抽到）
+let battleItems = []; // 道具栏中的道具/消耗品
+
+function initBackpack() {
+  backpack = state.backpack || [];
+}
+function toBackpack(card) {
+  backpack.push(card);
+}
+function fromBackpack(cardId) {
+  const idx = backpack.findIndex(c => c.uid === cardId);
+  if (idx >= 0) return backpack.splice(idx, 1)[0];
+  return null;
+}
+
+function initDeck() {
+  drawPile = getStartDeck();
+  shuffle(drawPile);
+  hand = [];
+  discardPile = [];
+}
+
+function drawCards(count) {
+  let drawn = 0;
+  for (let i = 0; i < count; i++) {
+    if (drawPile.length === 0) {
+      // 牌库为空就不再抽了（无弃牌堆回收）
+      break;
+    }
+    hand.push(drawPile.pop());
+    drawn++;
+  }
+  return drawn;
+}
+
+// 打出的牌直接放回牌库底
+function returnToDeck(card) {
+  drawPile.unshift(card);
+}
+
+// ===== 道具卡断裂机制 =====
+function getBreakChance(card) {
+  if (!card.item) return 0;
+  const uses = card.uses || 0;
+  return Math.min(uses * 0.12, 0.7); // 每用1次+12%，最高70%
+}
+
+function tryBreak(card) {
+  if (!card.item) return false;
+  const chance = getBreakChance(card);
+  if (Math.random() < chance) {
+    // 断裂！
+    if (card.star <= 1) {
+      // 1★道具爆炸：对敌伤害
+      const boomDmg = 6 + Math.floor(Math.random() * 6);
+      enemyHp = Math.max(0, enemyHp - boomDmg);
+      showHint(`💥 ${card.name} 爆炸！${boomDmg}伤害`);
+      animateDamage(boomDmg, 'enemy', false);
+      return true; // 完全消失
+    } else {
+      // 降星+数值减半
+      card.star--;
+      if (card.damage) card.damage = Math.floor(card.damage / 2);
+      if (card.shield) card.shield = Math.floor(card.shield / 2);
+      if (card.heal) card.heal = Math.floor(card.heal / 2);
+      card.uses = 0;
+      showHint(`⚡ ${card.name} 断裂！降为${card.star}★`);
+      return false; // 降级但没消失
+    }
+  }
+  return false;
+}
+
+// ===== 送进背包 =====
+function doBackpack() {
+  if (!playerTurn || hand.length === 0) return;
+  // 标记手牌为"可选中"状态
+  const section = document.getElementById('handSection');
+  const cards = section.querySelectorAll('.hand-card');
+  let selected = -1;
+  
+  cards.forEach((el, i) => {
+    el.style.cursor = 'pointer';
+    el.style.boxShadow = '0 0 0 2px #A78BFA';
+    el.onclick = () => {
+      if (selected === i) return;
+      selected = i;
+      // 送进背包
+      const card = hand[i];
+      hand.splice(i, 1);
+      toBackpack(card);
+      showHint(`🎒 ${card.name} 送进背包`);
+      updateBattleUI();
+      renderHand();
+    };
+  });
+  
+  showHint('🎒 点击一张牌送进背包');
+  // 3秒后恢复
+  setTimeout(() => { if (playerTurn) renderHand(); }, 3000);
+}
+
+// ===== 战前背包选择UI（大卡片+触屏优化）=====
+function openBackpackSelect(callback) {
+  const items = state.backpack || [];
+  let selected = [];
+  window._backpackCancel = () => { callback([]); };
+  window._closeOverlay = closeOverlay;
+
+  // 一键装填：按星级选最好的5个
+  function autoFill() {
+    const ranked = items.map((item, idx) => {
+      const tpl = CARD_DB[item.id];
+      return { idx, star: tpl ? (tpl.star || 0) : 0, consumable: tpl ? tpl.consumable : false };
+    });
+    // 非消耗品优先，按星级排序
+    ranked.sort((a, b) => {
+      if (a.consumable !== b.consumable) return a.consumable ? 1 : -1;
+      return b.star - a.star;
+    });
+    selected = ranked.slice(0, 5).map(r => r.idx);
+    renderSelect();
+  }
+
+  function renderSelect() {
+    const grouped = { item: [], consumable: [] };
+    items.forEach((item, idx) => {
+      const tpl = CARD_DB[item.id];
+      if (!tpl) return;
+      if (tpl.consumable) grouped.consumable.push({ item, tpl, idx });
+      else grouped.item.push({ item, tpl, idx });
+    });
+    // 按星级排序
+    const sortByStar = (a, b) => (b.tpl.star||0) - (a.tpl.star||0);
+    grouped.item.sort(sortByStar);
+    grouped.consumable.sort(sortByStar);
+
+    let html = `<div style="text-align:center;margin-bottom:6px">
+      <div style="font-size:28px">⚔️</div>
+      <div style="font-size:16px;color:#d4874a;font-weight:600">选择出战装备</div>
+      <div style="font-size:11px;color:#8B7D6B;margin-top:2px">点击卡片选择/取消 · 已选 <b style="color:#FFD700;font-size:14px">${selected.length}</b>/5</div>
+    </div>`;
+
+    const renderCard = ({ item, tpl, idx }) => {
+      const sel = selected.includes(idx);
+      const stars = tpl.star ? '★'.repeat(tpl.star) : '';
+      return `<div onclick="toggleSelect(${idx})" style="
+        padding:10px 6px;border-radius:8px;cursor:pointer;text-align:center;
+        border:2px solid ${sel ? '#FFD700' : '#3d3028'};
+        background:${sel ? '#2a2a1a' : '#1a1410'};
+        box-shadow:${sel ? '0 0 12px rgba(255,215,0,0.3)' : 'none'};
+        transition:all .15s;position:relative;user-select:none;
+        -webkit-tap-highlight-color:transparent;
+      ">
+        ${sel ? '<div style="position:absolute;top:3px;right:5px;font-size:14px;color:#FFD700;font-weight:bold">✓</div>' : ''}
+        <div style="font-size:28px;line-height:1.2">${tpl.icon}</div>
+        <div style="font-size:11px;color:#d4c9a8;margin-top:3px;font-weight:${sel?600:400}">${tpl.name}</div>
+        ${stars ? `<div style="font-size:8px;color:#FFD700;margin-top:1px">${stars}</div>` : ''}
+        <div style="font-size:7px;color:${tpl.consumable?'#ff4757':'#8B7D6B'};margin-top:2px">${tpl.consumable?'💊 一次性':`🔧 ${tpl.star||0}★`}</div>
+        <div style="font-size:7px;color:#6b5540;margin-top:1px;line-height:1.2">${(tpl.desc||'').slice(0,14)}</div>
+      </div>`;
+    };
+
+    if (grouped.item.length === 0 && grouped.consumable.length === 0) {
+      html += `<div style="padding:28px;color:#555;font-size:13px;text-align:center">
+        🎒 背包空空如也...<br><span style="font-size:11px;color:#6b5540">去商店购买或工匠合成获取道具</span>
+      </div>`;
+    } else {
+      html += `<div style="overflow-y:auto;max-height:50vh;padding-right:4px">`;
+      if (grouped.item.length > 0) {
+        html += `<div style="font-size:11px;color:#d4874a;margin:6px 0 4px 4px">🔧 道具</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px">`;
+        grouped.item.forEach(c => html += renderCard(c));
+        html += `</div>`;
+      }
+      if (grouped.consumable.length > 0) {
+        html += `<div style="font-size:11px;color:#ff4757;margin:8px 0 4px 4px">💊 消耗品</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px">`;
+        grouped.consumable.forEach(c => html += renderCard(c));
+        html += `</div>`;
+      }
+      html += `</div>`;
+    }
+
+    // 底部操作栏
+    const canFight = selected.length > 0;
+    html += `<div style="display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap">
+      <button onclick="autoFill()" style="
+        padding:8px 14px;border-radius:4px;border:1px solid #6b5540;
+        background:#1a1410;color:#d4c9a8;font-size:11px;cursor:pointer;
+      ">🎲 一键装填</button>
+      <button onclick="window._closeOverlay(); window._backpackCancel()" style="
+        padding:8px 14px;border-radius:4px;border:1px solid #6b5540;
+        background:#1a1410;color:#d4c9a8;font-size:11px;cursor:pointer;
+      ">🔄 空手出战</button>
+      <button onclick="confirmSelect()" style="
+        padding:8px 28px;border-radius:4px;cursor:pointer;font-size:13px;font-weight:700;
+        border:2px solid ${canFight ? '#FFD700' : '#6b5540'};
+        background:${canFight ? '#3d2a1a' : '#1a1410'};
+        color:${canFight ? '#FFD700' : '#6b5540'};
+        transition:all .15s;
+      ">⚔️ 出战${canFight ? ` (${selected.length})` : ''} →</button>
+    </div>`;
+
+    showOverlay(html, 'shop');
+  }
+
+  window.toggleSelect = (idx) => {
+    const pos = selected.indexOf(idx);
+    if (pos >= 0) selected.splice(pos, 1);
+    else if (selected.length < 5) selected.push(idx);
+    else showMapHint('⚠️ 最多带5个出战！');
+    renderSelect();
+  };
+  
+  window.confirmSelect = () => {
+    const chosen = selected.map(idx => {
+      const tpl = CARD_DB[items[idx].id];
+      return tpl ? { ...tpl, uid: items[idx].uid, uses: items[idx].uses || 0, usedThisBattle: false } : null;
+    }).filter(Boolean);
+    window._closeOverlay();
+    callback(chosen);
+  };
+  
+  window.autoFill = autoFill;
+  renderSelect();
+}
+
+// ===== 道具栏渲染 =====
+function renderItems() {
+  const slot = document.getElementById('itemSlot');
+  if (!slot) return;
+  slot.innerHTML = '';
+  
+  if (battleItems.length === 0) {
+    slot.innerHTML = '<span style="font-size:9px;color:#3d3028">未携带道具</span>';
+    return;
+  }
+  
+  battleItems.forEach((item, idx) => {
+    const used = item.usedThisBattle;
+    const stars = item.item ? '★'.repeat(item.star) : '';
+    const breakPct = item.item ? Math.round(getBreakChance(item) * 100) : -1;
+    
+    const el = document.createElement('div');
+    el.style.cssText = `display:flex;flex-direction:column;align-items:center;padding:3px 8px;border-radius:4px;border:1px solid ${used ? '#3d3028' : '#d4874a'};background:${used ? '#1a1410' : '#2a1f14'};cursor:${used || !playerTurn ? 'not-allowed' : 'pointer'};opacity:${used ? '0.35' : '1'};transition:all .2s;min-width:48px`;
+    
+    if (!used && playerTurn) {
+      el.onmouseover = () => { el.style.borderColor = '#FFD700'; el.style.transform = 'translateY(-3px)'; };
+      el.onmouseout = () => { el.style.borderColor = '#d4874a'; el.style.transform = ''; };
+      el.onclick = () => useItem(idx);
+    }
+    
+    el.innerHTML = `
+      <div style="font-size:16px">${item.icon}</div>
+      <div style="font-size:7px;color:#d4c9a8;margin-top:1px">${item.name}</div>
+      ${stars ? `<div style="font-size:6px;color:#FFD700">${stars}</div>` : ''}
+      <div style="font-size:6px;color:${item.consumable ? '#ff4757' : '#8B7D6B'}">${item.consumable ? '一次性' : (used ? '已用' : (item.item ? '1次/场' : ''))}</div>
+      ${breakPct >= 0 ? `<div style="font-size:6px;color:${breakPct > 50 ? '#ff4757' : '#8B7D6B'}">断${breakPct}%</div>` : ''}
+    `;
+    slot.appendChild(el);
+  });
+}
+
+function useItem(idx) {
+  if (!playerTurn) return;
+  const item = battleItems[idx];
+  if (!item || item.usedThisBattle) return;
+  if ((state.actionPoints || 0) < 1) { showHint('⏳ 行动点不足！'); return; }
+  
+  // 消耗行动点
+  state.actionPoints--;
+  
+  // 标记已用（本场只能1次）
+  item.usedThisBattle = true;
+  
+  // 执行效果
+  if (item.type === 'attack') {
+    playSE('attack');
+    const dmg = item.damage + Math.floor(Math.random() * 3);
+    enemyHp = Math.max(0, enemyHp - dmg);
+    animateCard(item.icon, 'enemy');
+    animateDamage(dmg, 'enemy', false);
+    playerAttackAnim();
+    enemyHitAnim();
+    showHint(`🔧 ${item.name}！${dmg}伤害`);
+  } else if (item.type === 'skill') {
+    if (item.heal) playSE('heal');
+    else playSE('skill');
+    if (item.shield) {
+      state.shield += item.shield;
+      animateDamage(item.shield, 'player', true);
+    }
+    if (item.heal) {
+      state.hp = Math.min(state.maxHp, state.hp + item.heal);
+      animateDamage(item.heal, 'player', false);
+    }
+    animateCard(item.icon, 'player');
+    showHint(`✨ ${item.name}！${item.desc}`);
+  } else if (item.type === 'power') {
+    playSE('power');
+    if (item.id === 'battery') state.energy += 2;
+    animateCard(item.icon, 'player');
+    showHint(`⚡ ${item.name}！${item.desc}`);
+  }
+  
+  // 道具卡断裂判定
+  if (item.item) {
+    item.uses = (item.uses || 0) + 1;
+    const broke = tryBreak(item);
+    if (!broke) {
+      // 没炸的话标记已用
+    }
+    // 消耗品用完即消失（不写回背包）
+  }
+  
+  // 更新UI
+  updateBattleUI();
+  renderItems();
+  updateStatus();
+  
+  if (enemyHp <= 0) { setTimeout(onBattleWin, 500); }
+}
+
+// ===== 战斗系统 =====
+let battleNode = null;
+let enemyHp = 0, enemyMaxHp = 0;
+let playerTurn = true;
+let currentMonster = null;
+let cardsPlayedThisBattle = 0; // 废品火花计数器
+let sparkMilestones = [3, 6]; // 第3张和第6张卡触发火花
+
+// ===== 连锁系统 =====
+let comboCount = 0;        // 本次连击数
+let lastCardType = null;   // 上一张牌的类型
+let turnCards = [];        // 本回合已出牌记录
+
+function resetCombo() {
+  comboCount = 0;
+  lastCardType = null;
+  turnCards = [];
+  updateComboUI();
+}
+
+function checkCombo(card) {
+  let bonus = { damage: 0, shield: 0, heal: 0 };
+  let comboMsgs = [];
+
+  if (lastCardType === card.type) {
+    // 同类型连锁
+    comboCount++;
+    const lvl = comboCount;
+    if (card.type === 'attack') {
+      bonus.damage = Math.min(lvl * 3, 12);
+      if (lvl >= 2) comboMsgs.push(`🔥 ${lvl}连击！伤害+${bonus.damage}`);
+    }
+    if (card.type === 'skill') {
+      bonus.shield = Math.min(lvl * 3, 12);
+      if (lvl >= 2) comboMsgs.push(`🛡️ ${lvl}连防！护甲+${bonus.shield}`);
+    }
+  } else {
+    // 切换类型
+    if (comboCount >= 2) {
+      // 之前有连击，切换类型触发转型奖励
+      comboMsgs.push('🔄 转型！');
+    }
+    comboCount = 1;
+    
+    // 交叉组合检测
+    if (turnCards.length >= 2) {
+      const p2 = turnCards[turnCards.length - 2];
+      const p1 = turnCards[turnCards.length - 1];
+      
+      // 攻击→防御→攻击：攻击+8
+      if (p2.type === 'attack' && p1.type === 'skill' && card.type === 'attack') {
+        bonus.damage += 8;
+        comboMsgs.push('💫 回旋斩！伤害+8');
+      }
+      // 防御→攻击→防御：护甲+8
+      if (p2.type === 'skill' && p1.type === 'attack' && card.type === 'skill') {
+        bonus.shield += 8;
+        comboMsgs.push('💫 铁壁反击！护甲+8');
+      }
+      
+      // 三连不同型：获得1能量
+      const types = new Set([p2.type, p1.type, card.type]);
+      if (types.size === 3) {
+        state.energy += 1;
+        comboMsgs.push('⚡ 万能连锁！能量+1');
+      }
+    }
+  }
+
+  lastCardType = card.type;
+  turnCards.push(card);
+  
+  // 显示组合提示
+  if (comboMsgs.length > 0) {
+    setTimeout(() => showHint(comboMsgs.join(' | ')), 200);
+  }
+  
+  updateComboUI();
+  return bonus;
+}
+
+function updateComboUI() {
+  let el = document.getElementById('comboDisplay');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'comboDisplay';
+    el.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:12px;color:#FFD700;z-index:4;pointer-events:none;text-align:center;text-shadow:0 0 10px rgba(255,215,0,0.3);opacity:0;transition:opacity .3s';
+    document.getElementById('battleArena').appendChild(el);
+  }
+  if (comboCount >= 2) {
+    el.textContent = `🔥 ${comboCount}连锁`;
+    el.style.opacity = '1';
+  } else {
+    el.style.opacity = '0';
+  }
+}
+
+function startBattleWith(monster, node, isElite) {
+  currentNonBattleNode = null; // 清除事件残留
+  currentMonster = monster;
+  battleNode = { ...node, atk: monster.atk };
+  
+  enemyHp = monster.hp;
+  enemyMaxHp = monster.hp;
+  state.shield = 0;
+  state.energy = state.maxEnergy;
+  state.actionPoints = 1; // 每回合1个行动点（用于道具）
+
+  const overlay = document.getElementById('battleOverlay');
+  overlay.className = 'battle-overlay show';
+  
+  // 播放战斗BGM
+  if (monster.isBoss) {
+    playBGM('boss');
+  } else {
+    playBGM('battle');
+  }
+
+  document.getElementById('enemyName').textContent = monster.id;
+  document.getElementById('enemyIntent').textContent = `⚔️ 攻击 ${monster.atk}`;
+  // 显示职业英文名
+  const jobInfo = JOBS[state.job];
+  if (jobInfo) document.getElementById('playerName').textContent = jobInfo.enName || 'Scavenger';
+  // 呼吸动画
+  const playerSprite = document.getElementById('playerSprite');
+  playerSprite.classList.remove('breathe');
+  void playerSprite.offsetWidth;
+  playerSprite.classList.add('breathe');
+  
+  // 根据怪物所在区域加载战斗背景
+  const zoneToBg = {
+    '垃圾平原':'battle-trash', '金属森林':'battle-metal', '油海':'battle-oil',
+    '电路荒漠':'battle-circuit', '核心熔炉':'battle-forge', '污染深渊':'battle-toxic',
+    '废铁王座':'battle-throne',
+  };
+  // 确定区域key
+  const zoneName = monster.zone || '';
+  const bgKey = monster.isBoss ? 'battle-boss' : (zoneToBg[zoneName] || 'battle');
+  const bgPrompt = SCENE_BG[bgKey];
+  const bgEl = document.getElementById('battleSceneBg');
+  const defaultBg = document.querySelector('.battle-bg');
+  if (bgPrompt && bgEl) {
+    const url = SPRITE_API + '?prompt=' + encodeURIComponent('16-bit pixel art ' + bgPrompt + ', wide landscape game background, dark wasteland atmosphere, strict pixel grid') + '&image_size=landscape_16_9';
+    bgEl.style.backgroundImage = `url(${url})`;
+    bgEl.classList.remove('loaded');
+    if (defaultBg) defaultBg.style.opacity = '0'; // 隐藏默认背景
+    const img = new Image();
+    img.onload = () => { bgEl.classList.add('loaded'); };
+    img.src = url;
+  } else {
+    if (bgEl) bgEl.style.backgroundImage = '';
+    if (defaultBg) defaultBg.style.opacity = '1';
+  }
+  
+  // 加载AI精灵图
+  const monsterPrompt = MONSTER_PROMPTS[monster.id];
+  if (monsterPrompt) {
+    loadSprite('enemyImg', monsterPrompt);
+  }
+  const jobPrompt = JOB_PROMPTS[state.job];
+  if (jobPrompt) {
+    loadSprite('playerImg', jobPrompt + ', holding weapon');
+  }
+
+  // 初始化牌库 + 道具栏（用战前选择的结果）+ 背包 + 连锁
+  initDeck();
+  initBackpack();
+  battleItems = state._pendingBattleItems || getBattleItems();
+  state._pendingBattleItems = null;
+  drawCards(4);
+  cardsPlayedThisBattle = 0;
+  resetCombo();
+  updateBattleUI();
+  renderHand();
+  renderItems();
+  showHint(`⚔️ ${monster.id} · HP ${monster.hp} ATK ${monster.atk}`);
+  playerTurn = true;
+}
+
+// ===== 废品火花：每场战斗打出的第3/6张卡各获得1构想 =====
+function checkSpark() {
+  if (sparkMilestones.includes(cardsPlayedThisBattle)) {
+    state.ideas += 1;
+    updateStatus();
+    const arena = document.getElementById('battleArena');
+    const spark = document.createElement('div');
+    spark.textContent = '💥💡';
+    spark.style.cssText = 'position:absolute;left:45%;top:30%;font-size:40px;z-index:15;pointer-events:none;animation:sparkAnim .8s ease-out forwards';
+    arena.appendChild(spark);
+    setTimeout(() => spark.remove(), 900);
+    setTimeout(() => showHint('💡 废品火花！构想+1'), 100);
+  }
+}
+
+const sparkStyle = document.createElement('style');
+sparkStyle.textContent = `@keyframes sparkAnim{0%{opacity:1;transform:scale(.3) rotate(0deg)}50%{opacity:1;transform:scale(1.5) rotate(180deg)}100%{opacity:0;transform:scale(2) rotate(360deg) translateY(-30px)}}`;
+document.head.appendChild(sparkStyle);
+
+function updateBattleUI() {
+  document.getElementById('pHpTag').textContent = `❤️ ${state.hp}`;
+  document.getElementById('pBar').style.width = (state.hp / state.maxHp * 100) + '%';
+  
+  const shieldTag = document.getElementById('pShieldTag');
+  const shieldBar = document.getElementById('pShieldBar');
+  if (state.shield > 0) {
+    shieldTag.style.display = 'flex';
+    shieldTag.textContent = `🛡️ ${state.shield}`;
+    shieldBar.style.display = 'block';
+    shieldBar.querySelector('.shield-bar-fill').style.width = Math.min(100, state.shield * 10) + '%';
+  } else {
+    shieldTag.style.display = 'none';
+    shieldBar.style.display = 'none';
+  }
+
+  document.getElementById('eHpTag').textContent = `❤️ ${Math.max(0,enemyHp)}`;
+  document.getElementById('eBar').style.width = (enemyHp / enemyMaxHp * 100) + '%';
+
+  const energySec = document.getElementById('energySection');
+  energySec.innerHTML = '';
+  for (let i = 0; i < state.maxEnergy; i++) {
+    const pip = document.createElement('div');
+    pip.className = 'energy-pip ' + (i < state.energy ? 'full' : 'empty');
+    pip.textContent = '⚡';
+    energySec.appendChild(pip);
+  }
+  
+  // 更新行动点显示
+  let apEl = document.getElementById('apDisplay');
+  if (!apEl) {
+    apEl = document.createElement('div');
+    apEl.id = 'apDisplay';
+    apEl.style.cssText = 'font-size:9px;color:#A78BFA;margin-left:4px';
+    document.getElementById('energySection').appendChild(apEl);
+  }
+  apEl.textContent = `⏳${state.actionPoints || 0}`;
+  
+  document.getElementById('deckCount').textContent = `牌库 ${drawPile.length}`;
+  document.getElementById('backpackCount').textContent = `🎒 ${backpack.length}`;
+}
+
+function showHint(text) {
+  const hint = document.getElementById('battleHint');
+  hint.textContent = text;
+  hint.classList.remove('show');
+  void hint.offsetWidth;
+  hint.classList.add('show');
+}
+
+// ===== 手牌渲染 =====
+function renderHand() {
+  const section = document.getElementById('handSection');
+  section.innerHTML = '';
+  
+  // 错位扇形排列
+  const total = hand.length;
+  hand.forEach((card, idx) => {
+    const el = document.createElement('div');
+    el.className = 'hand-card';
+    const rot = -8 + (idx / Math.max(total - 1, 1)) * 16;
+    el.style.transform = `rotate(${rot}deg) translateY(${Math.abs(rot) * 0.3}px)`;
+    el.style.zIndex = idx + 1;
+    
+    const stars = card.item ? '★'.repeat(card.star) : '';
+    const tag = card.consumable ? '<span style="font-size:6px;color:#ff4757;position:absolute;top:2px;right:2px">一次性</span>' : '';
+    const breakPct = card.item ? Math.round(getBreakChance(card) * 100) : -1;
+    const breakTag = breakPct >= 0 ? `<span style="font-size:5px;color:${breakPct > 50 ? '#ff4757' : '#8B7D6B'};position:absolute;bottom:12px;left:2px">断${breakPct}%</span>` : '';
+    el.innerHTML = `
+      <div class="cost" style="background:${card.color}">${card.cost}</div>
+      ${tag}
+      <div class="h-icon">${card.icon}</div>
+      <div class="h-name">${card.name}</div>
+      <div style="font-size:6px;color:#FFD700;margin-top:-1px">${stars}</div>
+      <div class="h-desc" style="font-size:5px;color:#8B7D6B;text-align:center;line-height:1.2">${card.desc}</div>
+      ${breakTag}
+    `;
+    
+    if (playerTurn) {
+      el.onclick = () => playCard(idx);
+      // 费用不够时变灰
+      if (card.cost > state.energy) {
+        el.style.opacity = '0.4';
+        el.style.cursor = 'not-allowed';
+        el.onclick = null;
+      }
+    }
+    
+    section.appendChild(el);
+  });
+}
+
+// ===== 出牌 =====
+function playCard(idx) {
+  if (!playerTurn) return;
+  const card = hand[idx];
+  if (!card) return;
+  if (card.cost > state.energy) { showHint('⚡ 能量不足！'); return; }
+
+  // 扣除能量
+  state.energy -= card.cost;
+  
+  // 移出手牌
+  hand.splice(idx, 1);
+  
+  // 消耗品：用完永久消失（不进弃牌堆）
+  const isConsumable = card.consumable;
+  
+  // 计算连锁加成
+  const combo = checkCombo(card);
+  
+  // 执行卡牌效果（含加成）
+  if (card.type === 'attack') {
+    playSE('attack');
+    const bonusDmg = combo.damage;
+    const dmg = card.damage + Math.floor(Math.random() * 3) + bonusDmg;
+    enemyHp = Math.max(0, enemyHp - dmg);
+    animateCard(card.icon, 'enemy');
+    animateDamage(dmg, 'enemy', false);
+    playerAttackAnim();
+    enemyHitAnim();
+    // 屏幕震动+闪光
+    document.getElementById('battleArena').classList.remove('shake');
+    void document.getElementById('battleArena').offsetWidth;
+    document.getElementById('battleArena').classList.add('shake');
+    document.getElementById('enemySprite').classList.remove('flash');
+    void document.getElementById('enemySprite').offsetWidth;
+    document.getElementById('enemySprite').classList.add('flash');
+    const msg = bonusDmg > 0 ? `⚔️ ${card.name}！${dmg}伤害(+${bonusDmg})` : `⚔️ ${card.name}！${dmg}伤害`;
+    showHint(msg);
+  } else if (card.type === 'skill') {
+    const bonusShield = combo.shield;
+    const bonusHeal = combo.heal;
+    if (card.heal) playSE('heal');
+    else playSE('skill');
+    if (card.shield) {
+      const total = card.shield + bonusShield;
+      state.shield += total;
+      animateDamage(total, 'player', true);
+    }
+    if (card.heal) {
+      const total = card.heal + bonusHeal;
+      state.hp = Math.min(state.maxHp, state.hp + total);
+      animateDamage(total, 'player', false);
+    }
+    if (card.scrap) {
+      state.scrap[1] = (state.scrap[1]||0) + card.scrap;
+    }
+    animateCard(card.icon, 'player');
+    const extras = [];
+    if (bonusShield > 0) extras.push(`+${bonusShield}护甲`);
+    if (bonusHeal > 0) extras.push(`+${bonusHeal}治疗`);
+    const ext = extras.length > 0 ? ` (${extras.join(' ')})` : '';
+    showHint(`✨ ${card.name}！${card.desc}${ext}`);
+  } else if (card.type === 'power') {
+    playSE('power');
+    if (card.id === 'surge') {
+      state.energy += 1;
+    }
+    animateCard(card.icon, 'player');
+    showHint(`⚡ ${card.name}！${card.desc}`);
+  }
+
+  cardsPlayedThisBattle++;
+  checkSpark();
+  
+  // 所有牌用完回牌库（消耗品/爆炸道具除外）
+  if (!isConsumable) {
+    if (card.item) {
+      card.uses = (card.uses || 0) + 1;
+      const broke = tryBreak(card);
+      if (!broke && card.star > 0) {
+        returnToDeck(card); // 没炸就回牌库
+      }
+    } else {
+      returnToDeck(card); // 基础牌回牌库
+    }
+  }
+  // 消耗品：不进牌库（永久消失）
+  
+  updateBattleUI();
+  renderHand();
+  
+  // 从牌库补1张牌
+  if (drawPile.length === 0 && discardPile.length > 0) {
+    drawPile = discardPile;
+    discardPile = [];
+    shuffle(drawPile);
+  }
+  if (drawPile.length > 0) {
+    hand.push(drawPile.pop());
+    renderHand();
+    updateBattleUI();
+  }
+
+  // 检查敌人死亡
+  if (enemyHp <= 0) { setTimeout(onBattleWin, 500); return; }
+
+  // 自动结束回合条件：没能量且没有0费可出牌，或手牌全不可出
+  const hasPlayable = hand.some(c => c.cost <= state.energy);
+  if (!hasPlayable || hand.length === 0) {
+    playerTurn = false;
+    setTimeout(enemyTurn, 800);
+  }
+}
+
+function doEndTurn() {
+  if (!playerTurn) return;
+  // 手牌全部放回牌库
+  while (hand.length > 0) {
+    returnToDeck(hand.pop());
+  }
+  resetCombo();
+  playerTurn = false;
+  showHint('⏭️ 回合结束');
+  renderHand();
+  updateBattleUI();
+  setTimeout(enemyTurn, 600);
+}
+
+function enemyTurn() {
+  const atk = battleNode.atk;
+  const absorbed = Math.min(state.shield, atk);
+  const dmg = Math.max(0, atk - state.shield);
+  state.shield = Math.max(0, state.shield - atk);
+
+  // 敌人前冲动画
+  document.getElementById('enemyUnit').classList.remove('enemy-attacking');
+  void document.getElementById('enemyUnit').offsetWidth;
+  document.getElementById('enemyUnit').classList.add('enemy-attacking');
+  
+  document.getElementById('playerSprite').classList.remove('hit');
+  void document.getElementById('playerSprite').offsetWidth;
+  document.getElementById('playerSprite').classList.add('hit');
+  document.getElementById('playerSprite').classList.remove('flash');
+  void document.getElementById('playerSprite').offsetWidth;
+  document.getElementById('playerSprite').classList.add('flash');
+  document.getElementById('battleArena').classList.remove('shake');
+  void document.getElementById('battleArena').offsetWidth;
+  document.getElementById('battleArena').classList.add('shake');
+
+  state.hp = Math.max(0, state.hp - dmg);
+  updateBattleUI();
+  if (absorbed > 0) showHint(`💥 格挡 ${absorbed}，受到 ${dmg} 伤害`);
+  else showHint(`💥 受到 ${dmg} 点伤害`);
+  animateDamage(dmg, 'player', false);
+
+  if (state.hp <= 0) {
+    setTimeout(() => showResult('💀 战败', '你被击败了...', false), 500);
+    return;
+  }
+
+  // 重置连锁
+  resetCombo();
+  
+  // 玩家回合开始：回满能量 + 重置行动点 + 抽牌
+  playerTurn = true;
+  state.energy = state.maxEnergy;
+  state.actionPoints = 1; // 每回合1个行动点
+  
+  // 剩余手牌放回牌库并洗牌
+  while (hand.length > 0) {
+    returnToDeck(hand.pop());
+  }
+  shuffle(drawPile);
+  
+  // 抽4张
+  drawCards(4);
+  
+  updateBattleUI();
+  renderHand();
+  setTimeout(() => showHint('⬆️ 你的回合，抽牌！'), 400);
+}
+
+// ===== 动画 =====
+function animateCard(icon, target) {
+  const arena = document.getElementById('battleArena');
+  const fly = document.createElement('div');
+  fly.className = 'card-fly';
+  fly.textContent = icon;
+  fly.style.left = target === 'enemy' ? '15%' : '85%';
+  fly.style.top = '40%';
+  arena.appendChild(fly);
+  setTimeout(() => fly.remove(), 500);
+}
+
+function playerAttackAnim() {
+  const sprite = document.getElementById('playerSprite');
+  // 根据不同职业选择攻击动画
+  const jobAnims = {
+    wrecker: 'attack-slash', forger: 'attack-smash', recycler: 'attack-slash',
+    toxic: 'attack-thrust', overload: 'attack-cast', assembler: 'attack-spin'
+  };
+  const anim = jobAnims[state.job] || 'attack-slash';
+  sprite.classList.remove(anim, 'breathe');
+  void sprite.offsetWidth;
+  sprite.classList.add(anim);
+  // 攻击完成后恢复呼吸
+  setTimeout(() => { sprite.classList.remove(anim); sprite.classList.add('breathe'); }, 500);
+}
+
+function enemyHitAnim() {
+  const enemy = document.getElementById('enemyUnit');
+  enemy.classList.remove('enemy-hit');
+  void enemy.offsetWidth;
+  enemy.classList.add('enemy-hit');
+  setTimeout(() => enemy.classList.remove('enemy-hit'), 500);
+}
+
+function animateDamage(val, target, isBlock) {
+  const unit = target === 'enemy' ? document.getElementById('enemyUnit') : document.getElementById('playerUnit');
+  const popup = document.createElement('div');
+  popup.className = 'dmg-popup ' + (isBlock ? 'block' : (target === 'enemy' ? 'damage' : 'heal'));
+  if (!isBlock && val > 10) popup.className += ' crit';
+  popup.textContent = isBlock ? `+${val}` : `-${val}`;
+  popup.style.left = (30 + Math.random() * 40) + '%';
+  popup.style.top = (10 + Math.random() * 30) + '%';
+  unit.appendChild(popup);
+  setTimeout(() => popup.remove(), 900);
+}
+
+// ===== 战斗胜利 =====
+function onBattleWin() {
+  const isBoss = currentMonster && currentMonster.isBoss;
+  const isElite = battleNode.elite;
+  
+  const scrapGain = isBoss ? '3★×1' : (isElite ? '2★×2' : '1★×2');
+  const dm = diffMult();
+  const goldGain = Math.floor((isBoss ? 20 : (isElite ? 12 : 6)) * dm.gold);
+  const hpGain = Math.floor(3 * dm.heal);
+  const ideaGain = isBoss ? 3 : (isElite ? 2 : 1);
+
+  state.hp = Math.min(state.maxHp, state.hp + hpGain);
+  if (isBoss) state.scrap[3] = (state.scrap[3]||0) + Math.ceil(1 * dm.scrap);
+  else if (isElite) state.scrap[2] = (state.scrap[2]||0) + Math.ceil(2 * dm.scrap);
+  else state.scrap[1] = (state.scrap[1]||0) + Math.ceil(2 * dm.scrap);
+  state.gold += goldGain;
+  state.ideas += ideaGain;
+
+  document.getElementById('battleOverlay').classList.remove('show');
+  
+  // 保存道具回背包
+  saveBackpackItems(battleItems);
+  
+  // 完成节点 + 解锁下一列
+  completeNode(battleNode.id, battleNode.lane);
+  showResult('🎉 胜利!', `+${hpGain}❤️ · 获得 ${scrapGain} · ${goldGain}💰 · 💡+${ideaGain}`, false);
+}
+
+function completeNode(nodeId, lane) {
+  state.completed.push(nodeId);
+  
+  // 从completed中提取列号
+  let ci = -1;
+  for (let i = 0; i < MAP_DATA.length; i++) {
+    for (const n of MAP_DATA[i]) {
+      if (n.id === nodeId) { ci = i; break; }
+    }
+    if (ci >= 0) break;
+  }
+
+  // 从unlocked中移除当前列及之前所有列（不能回头）
+  state.unlocked = state.unlocked.filter(k => {
+    const colNum = parseInt(k.split('_')[0]);
+    if (colNum <= ci) {
+      // 把当前列未完成的节点也标记为完成（跳过了）
+      const lane = parseInt(k.split('_')[1]);
+      const node = MAP_DATA[colNum]?.find(n => n.lane === lane);
+      if (node && !state.completed.includes(node.id) && node.id !== nodeId) {
+        state.completed.push(node.id);
+      }
+      return false;
+    }
+    return true;
+  });
+
+  // 解锁下一列的同路节点
+  const nextCi = ci + 1;
+  if (nextCi < MAP_DATA.length) {
+    const nextNode = MAP_DATA[nextCi].find(n => n.lane === lane);
+    if (nextNode) {
+      const key = `${nextCi}_${lane}`;
+      if (!state.unlocked.includes(key)) {
+        state.unlocked.push(key);
+      }
+    }
+    // Boss列特殊处理：任意路完成精英后解锁Boss
+    if (nextCi === MAP_DATA.length - 1) {
+      const bossKey = `${nextCi}_0`;
+      if (!state.unlocked.includes(bossKey)) {
+        state.unlocked.push(bossKey);
+      }
+    }
+  }
+
+  state.col = nextCi;
+  state.lane = lane;
+  buildMap();
+}
+
+// ===== 商店 =====
+function openShop(node) {
+  playBGM('shop');
+  const isShady = node.shopType === 'shady';
+  const items = isShady 
+    ? ['🔧废铁打击','🛡️铁皮防护','♻️废品回收','💉紧急维修']
+    : ['⚡电击切割','🔩生锈护板','🔍零件搜索','🛢️油污涂层','♻️废料重组','🗑️弹射铁片','🛡️废铁盾牌','🔧管钳重击','⚙️齿轮飞镖','🧪净化喷雾'];
+  const title = isShady ? '💰 奸商店铺' : '🛒 正常商店';
+  const priceMult = isShady ? 2 : 1;
+  const maxBuy = 1; // 每件商品只有1个
+  const maxTotal = isShady ? 99 : 3; // 普通商店最多买3件
+  
+  const npcIcon = isShady ? '🦊' : '🐻';
+  const npcLabel = isShady ? '奸商 · 狐狸面罩' : '商人 · 废铁兄弟会';
+  // 追踪购买
+  if (!state._shopBuys) state._shopBuys = {};
+  if (!state._shopTotal) state._shopTotal = {};
+  const shopKey = node.id;
+  const totalBought = state._shopTotal[shopKey] || 0;
+  
+  let content = `<div class="npc-scene npc-shop"><span class="npc-icon">${npcIcon}</span><div class="npc-label">${npcLabel}</div></div>
+  <div style="padding:0 20px 20px;text-align:center">
+    <div style="font-size:20px;color:#d4874a;margin-bottom:8px">${title}</div>
+    <div style="font-size:11px;color:#8B7D6B;margin-bottom:12px">${isShady ? '价格永久+50%，无限购买' : `8件商品·选${maxTotal}件·可刷新1次·已购${totalBought}/${maxTotal}`}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:12px" id="shopItems">`;
+  
+  const displayItems = isShady ? items.slice(0,4) : items.slice(0,8);
+  displayItems.forEach((item, i) => {
+    const price = isShady ? (5 + i * 3) * priceMult : 3 + i * 2;
+    const bought = state._shopBuys[shopKey+'_'+i] || 0;
+    const canBuy = bought < maxBuy && totalBought < maxTotal;
+    content += `<div style="width:100px;padding:8px;background:#1a1410;border:1px solid ${isShady ? '#ff475744' : '#3d3028'};border-radius:6px;text-align:center">
+      <div style="font-size:18px;margin-bottom:4px">${item.split('')[0]}</div>
+      <div style="font-size:9px;color:#d4c9a8">${item}</div>
+      <div style="font-size:8px;color:#d4874a;margin-top:4px">💰${price}</div>
+      ${canBuy ? `<button onclick="buyItem(${i},${price},${isShady},'${shopKey}')" style="margin-top:4px;padding:2px 8px;border-radius:3px;border:1px solid #6b5540;background:#3d3028;color:#d4c9a8;font-size:8px;cursor:pointer">购买</button>` : `<div style="margin-top:6px;font-size:8px;color:#555">${bought>=maxBuy?'已购':'已满'}</div>`}
+    </div>`;
+  });
+  if (!isShady) content += `<div style="width:100%;margin-top:4px"><button onclick="refreshShop()" style="padding:3px 12px;border-radius:4px;border:1px solid #6b5540;background:#3d3028;color:#d4c9a8;font-size:10px;cursor:pointer">🔄 刷新 ($10)</button></div>`;
+  
+  content += `</div><div style="margin-top:10px"><button class="result-btn" onclick="closeOverlay()" style="padding:8px 24px;font-size:13px">离开商店 →</button></div></div></div>`;
+  showOverlay(content, 'shop');
+}
+
+function buyItem(idx, price, isShady, shopKey) {
+  if (state.gold < price) { showMapHint('💰 金币不足！'); return; }
+  // 检查总额限制
+  if (!isShady && shopKey) {
+    const key = shopKey+'_'+idx;
+    if ((state._shopBuys[key]||0) >= 1) { showMapHint('⛔ 此商品已购！'); return; }
+    if ((state._shopTotal[shopKey]||0) >= 3) { showMapHint('⛔ 本店已购满3件！'); return; }
+    state._shopBuys[key] = 1;
+    state._shopTotal[shopKey] = (state._shopTotal[shopKey]||0) + 1;
+  }
+  state.gold -= price;
+  const pool = isShady ? ['shank','plate','grenade'] : ['pipe','shank','plate','medkit','spark'];
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  if (!state.backpack) state.backpack = [];
+  state.backpack.push({ id: pick, uid: pick + '_' + Date.now(), uses: 0 });
+  updateStatus();
+  showMapHint(`✅ 获得 ${CARD_DB[pick].name}！`);
+  if (!isShady && shopKey) openShop({ id:shopKey, shopType:'normal' });
+}
+
+function refreshShop() {
+  if (state.gold < 10) { showMapHint('💰 金币不足！'); return; }
+  state.gold -= 10;
+  // 重置购买记录（刷新货架）
+  state._shopBuys = {};
+  state._shopTotal = {};
+  updateStatus();
+  showMapHint('🔄 货架已刷新，可重新选购！');
+}
+
+// ===== 特殊事件（多选项+背景图）=====
+function openEvent(node) {
+  if (node.eventType === 'gacha') {
+    showOverlay(`<div style="text-align:center;margin-bottom:10px"><div style="font-size:40px">🤖</div><div style="font-size:13px;color:#8B7D6B;margin-top:2px">废品回收员 · 生锈铁皮</div></div>
+    <div style="font-size:18px;color:#d4874a;text-align:center;margin-bottom:6px">🎰 垃圾池抽奖</div>
+    <div style="font-size:11px;color:#8B7D6B;text-align:center;margin-bottom:14px">用血量换奖励，选一个抽法</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="choice-btn" onclick="doGachaSafe()"><span class="c-icon">🔩</span><span class="c-text"><span class="c-title">稳妥抽</span><span class="c-desc">3❤️ → 大概率废料/小概率金币</span></span><span class="c-cost">-3❤️</span></button>
+      <button class="choice-btn" onclick="doGachaRisky()"><span class="c-icon">💰</span><span class="c-text"><span class="c-title">冒险抽</span><span class="c-desc">5❤️ → 可能大丰收也可能血亏</span></span><span class="c-cost">-5❤️</span></button>
+      <button class="choice-btn" onclick="doGachaGamble()"><span class="c-icon">💎</span><span class="c-text"><span class="c-title">豪赌抽</span><span class="c-desc">8❤️ → 高概率出好东西但可能重伤</span></span><span class="c-cost">-8❤️</span></button>
+    </div>
+    <div style="margin-top:12px;text-align:center"><button class="result-btn" onclick="closeOverlay()" style="padding:8px 24px;font-size:12px">离开</button></div>`, 'gacha');
+  } else if (node.eventType === 'merchant') {
+    showOverlay(`<div style="text-align:center;margin-bottom:10px"><div style="font-size:40px">🐺</div><div style="font-size:13px;color:#8B7D6B;margin-top:2px">流浪商人 · 独狼</div></div>
+    <div style="font-size:18px;color:#d4874a;text-align:center;margin-bottom:6px">🏪 流浪商人的交易</div>
+    <div style="font-size:11px;color:#8B7D6B;text-align:center;margin-bottom:14px">选一项交易，完成后离开</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="choice-btn" onclick="tradeMerchant('hp')"><span class="c-icon">❤️</span><span class="c-text"><span class="c-title">鲜血换废料</span><span class="c-desc">消耗5生命 → 获得1★废料×3</span></span><span class="c-cost">-5❤️</span></button>
+      <button class="choice-btn" onclick="tradeMerchant('scrap')"><span class="c-icon">🔩</span><span class="c-text"><span class="c-title">废料换金币</span><span class="c-desc">消耗2个1★废料 → 获得12金币</span></span><span class="c-cost">-2★</span></button>
+      <button class="choice-btn" onclick="tradeMerchant('gold')"><span class="c-icon">🛡️</span><span class="c-text"><span class="c-title">金币买护甲</span><span class="c-desc">消耗15金币 → 获得8护甲</span></span><span class="c-cost">-15💰</span></button>
+    </div>
+    <div style="margin-top:12px;text-align:center"><button class="result-btn" onclick="closeOverlay()" style="padding:8px 24px;font-size:12px">拒绝交易</button></div>`, 'merchant');
+  } else if (node.eventType === 'legend') {
+    showOverlay(`<div style="text-align:center;margin-bottom:10px"><div style="font-size:40px">📖</div><div style="font-size:13px;color:#8B7D6B;margin-top:2px">记录官 · 机械眼球</div></div>
+    <div style="font-size:18px;color:#d4874a;text-align:center;margin-bottom:6px">📜 废铁高塔传闻</div>
+    <div style="font-size:11px;color:#b8a88a;text-align:center;margin-bottom:14px">高塔的秘密在数据流中闪烁...</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="choice-btn" onclick="doLegend('gold')"><span class="c-icon">💰</span><span class="c-text"><span class="c-title">打听宝藏位置</span><span class="c-desc">获得10金币的情报</span></span></button>
+       <button class="choice-btn" onclick="doLegend('shield')"><span class="c-icon">📋</span><span class="c-text"><span class="c-title">研究防御蓝图</span><span class="c-desc">获得6点护甲的加固方案</span></span></button>
+       <button class="choice-btn" onclick="doLegend('heal')"><span class="c-icon">💊</span><span class="c-text"><span class="c-title">学习急救知识</span><span class="c-desc">恢复5点生命</span></span></button>
+    </div>`, 'legend');
+  }
+}
+
+function doGachaSafe() {
+  if (eventChoiceLock) return;
+  eventChoiceLock = true;
+  if (state.hp < 3) { showMapHint('❤️ 血量不足！'); eventChoiceLock = false; return; }
+  state.hp -= 3;
+  const r = Math.random();
+  if (r < 0.1) { state.gold += 15; showMapHint('🎉 +15💰 +1★'); state.scrap[1]=(state.scrap[1]||0)+1; }
+  else if (r < 0.4) { state.gold += 8; showMapHint('👍 +8💰'); }
+  else { state.scrap[1]=(state.scrap[1]||0)+2; showMapHint('🔩 废料×2'); }
+  updateStatus();
+  setTimeout(() => { eventChoiceLock = false; }, 300);
+}
+
+function doGachaRisky() {
+  if (eventChoiceLock) return;
+  eventChoiceLock = true;
+  if (state.hp < 5) { showMapHint('❤️ 血量不足！'); eventChoiceLock = false; return; }
+  state.hp -= 5;
+  const r = Math.random();
+  if (r < 0.15) { state.gold += 25; state.scrap[2]=(state.scrap[2]||0)+1; showMapHint('🔥 大丰收！+25💰 +2★'); }
+  else if (r < 0.4) { state.gold += 12; state.scrap[1]=(state.scrap[1]||0)+2; showMapHint('👍 +12💰 +废料×2'); }
+  else if (r < 0.75) { state.scrap[1]=(state.scrap[1]||0)+3; showMapHint('🔩 废料×3'); }
+  else { state.hp = Math.max(0, state.hp - 5); showMapHint('💀 炸膛！额外-5❤️'); }
+  updateStatus();
+  setTimeout(() => { eventChoiceLock = false; }, 300);
+}
+
+function doGachaGamble() {
+  if (eventChoiceLock) return;
+  eventChoiceLock = true;
+  if (state.hp < 8) { showMapHint('❤️ 血量不足！'); eventChoiceLock = false; return; }
+  state.hp -= 8;
+  const r = Math.random();
+  if (r < 0.2) { state.gold += 35; state.scrap[3]=(state.scrap[3]||0)+1; showMapHint('👑 传说！+35💰 +3★'); }
+  else if (r < 0.5) { state.gold += 20; state.scrap[2]=(state.scrap[2]||0)+1; showMapHint('✨ 大赚！+20💰 +2★'); }
+  else if (r < 0.8) { state.gold += 10; state.scrap[1]=(state.scrap[1]||0)+3; showMapHint('👍 +10💰 +3★废料'); }
+  else { state.hp = Math.max(0, state.hp - 10); showMapHint('💀 灾难！额外-10❤️'); }
+  updateStatus();
+  setTimeout(() => { eventChoiceLock = false; }, 300);
+}
+
+let eventChoiceLock = false; // 防止事件选项连点
+
+function doLegend(type) {
+  if (eventChoiceLock) return;
+  eventChoiceLock = true;
+  if (type === 'gold') { state.gold += 10; showMapHint('💰 获得10金币'); }
+  else if (type === 'shield') { state.shield += 6; showMapHint('🛡️ 获得6护甲'); }
+  else if (type === 'heal') { state.hp = Math.min(state.maxHp, state.hp + 5); showMapHint('❤️ 恢复5生命'); }
+  updateStatus();
+  setTimeout(() => { closeOverlay(); eventChoiceLock = false; }, 400);
+}
+
+function tradeMerchant(type) {
+  if (eventChoiceLock) return;
+  eventChoiceLock = true;
+  if (type === 'hp') { if (state.hp < 5) { showMapHint('血量不足！'); eventChoiceLock = false; return; } state.hp -= 5; state.scrap[1]=(state.scrap[1]||0)+3; showMapHint('交易成功！+3★废料'); }
+  else if (type === 'scrap') { if ((state.scrap[1]||0) < 2) { showMapHint('废料不足！'); eventChoiceLock = false; return; } state.scrap[1]-=2; state.gold+=12; showMapHint('交易成功！+12💰'); }
+  else if (type === 'gold') { if (state.gold < 15) { showMapHint('金币不足！'); eventChoiceLock = false; return; } state.gold-=15; state.shield+=8; showMapHint('交易成功！+8护甲'); }
+  updateStatus();
+  setTimeout(() => { closeOverlay(); eventChoiceLock = false; }, 500);
+}
+
+// ===== 工匠事务所（多选项）=====
+function openCraft(node) {
+  playBGM('craft');
+  const can1 = (state.scrap[1]||0) >= 2;
+  const can2 = (state.scrap[2]||0) >= 2;
+  const can3 = (state.scrap[3]||0) >= 2;
+  
+  // 检查背包中可升级的道具（≥2个同星非消耗品）
+  const items = state.backpack || [];
+  const groupedByStar = {};
+  items.forEach(item => {
+    const tpl = CARD_DB[item.id];
+    if (!tpl || tpl.consumable || !tpl.star || tpl.star >= 4) return;
+    const s = tpl.star;
+    if (!groupedByStar[s]) groupedByStar[s] = [];
+    groupedByStar[s].push(item);
+  });
+  
+  let upgradeHtml = '';
+  for (let s = 1; s <= 3; s++) {
+    const list = groupedByStar[s] || [];
+    if (list.length >= 2) {
+      const nextStar = s + 1;
+      const names = list.slice(0, 2).map(item => CARD_DB[item.id]?.name || '?').join(' + ');
+      upgradeHtml += `<button class="choice-btn" onclick="upgradeItems(${s})">
+        <span class="c-icon">⬆️</span>
+        <span class="c-text"><span class="c-title">${s}★道具升级 → ${nextStar}★</span>
+        <span class="c-desc">消耗2个${s}★道具合成${nextStar}★道具（${names}）</span></span>
+      </button>`;
+    }
+  }
+  
+  showOverlay(`<div style="text-align:center;margin-bottom:10px"><div style="font-size:40px">🔧</div><div style="font-size:13px;color:#8B7D6B;margin-top:2px">工匠 · 独眼铁砧</div></div>
+    <div style="font-size:18px;color:#d4874a;text-align:center;margin-bottom:4px">⚒️ 工匠事务所</div>
+    <div style="font-size:10px;color:#8B7D6B;text-align:center;margin-bottom:6px">🔩废料: 1★×${state.scrap[1]||0} 2★×${state.scrap[2]||0} 3★×${state.scrap[3]||0}</div>
+    <div style="font-size:10px;color:#d4874a;text-align:left;margin:6px 0 4px 4px">🗜️ 废料合成（消耗废料获得道具）</div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px">
+      ${can1 ? `<button class="choice-btn" onclick="doCraft(1)"><span class="c-icon">🔩</span><span class="c-text"><span class="c-title">合成2★道具</span><span class="c-desc">消耗2个1★废料 → 获得随机2★道具</span></span></button>` : `<div style="padding:8px 16px;border-radius:6px;border:1px dashed #3d3028;color:#555;font-size:10px;text-align:center">需要2个1★废料</div>`}
+      ${can2 ? `<button class="choice-btn" onclick="doCraft(2)"><span class="c-icon">🗡️</span><span class="c-text"><span class="c-title">合成3★道具</span><span class="c-desc">消耗2个2★废料 → 获得随机3★道具</span></span></button>` : ''}
+      ${can3 ? `<button class="choice-btn" onclick="doCraft(3)"><span class="c-icon">⚡</span><span class="c-text"><span class="c-title">合成4★道具</span><span class="c-desc">消耗2个3★废料 → 获得随机4★道具</span></span></button>` : ''}
+    </div>
+    ${upgradeHtml ? `<div style="font-size:10px;color:#A78BFA;text-align:left;margin:6px 0 4px 4px">⬆️ 道具升级（消耗2个同星道具合成1个高星）</div>
+    <div style="display:flex;flex-direction:column;gap:6px">${upgradeHtml}</div>` : ''}
+    <div style="margin-top:10px;text-align:center"><button class="result-btn" onclick="closeOverlay()" style="padding:8px 24px;font-size:12px">离开</button></div>`, 'craft');
+}
+
+function doCraft(star) {
+  if (eventChoiceLock) return;
+  eventChoiceLock = true;
+  if ((state.scrap[star]||0) < 2) { eventChoiceLock = false; return; }
+  state.scrap[star] -= 2;
+  let rewardId;
+  if (star === 1) rewardId = Math.random() < 0.5 ? 'coil' : 'shield';
+  else if (star === 2) rewardId = Math.random() < 0.5 ? 'blade' : 'armor';
+  else rewardId = Math.random() < 0.5 ? 'drill' : 'fortress';
+  if (!state.backpack) state.backpack = [];
+  state.backpack.push({ id: rewardId, uid: rewardId + '_' + Date.now(), uses: 0 });
+  updateStatus();
+  showMapHint(`⚒️ 合成${CARD_DB[rewardId].name}！已放入背包`);
+  setTimeout(() => { openCraft({}); eventChoiceLock = false; }, 400);
+}
+
+// 道具升级：消耗2个同星道具合成高星道具
+function upgradeItems(star) {
+  if (eventChoiceLock) return;
+  eventChoiceLock = true;
+  const items = state.backpack || [];
+  const candidates = items.filter(item => {
+    const tpl = CARD_DB[item.id];
+    return tpl && !tpl.consumable && tpl.star === star;
+  });
+  if (candidates.length < 2) { eventChoiceLock = false; return; }
+  
+  // 消耗前2个
+  const removeUids = new Set([candidates[0].uid, candidates[1].uid]);
+  state.backpack = items.filter(item => !removeUids.has(item.uid));
+  
+  // 获得高星道具
+  const nextStar = star + 1;
+  let rewardId;
+  if (nextStar === 2) rewardId = Math.random() < 0.5 ? 'coil' : 'shield';
+  else if (nextStar === 3) rewardId = Math.random() < 0.5 ? 'blade' : 'armor';
+  else rewardId = Math.random() < 0.5 ? 'drill' : 'fortress';
+  state.backpack.push({ id: rewardId, uid: rewardId + '_' + Date.now(), uses: 0 });
+  
+  updateStatus();
+  showMapHint(`⬆️ ${star}★道具升级为${CARD_DB[rewardId].name}！`);
+  setTimeout(() => { openCraft({}); eventChoiceLock = false; }, 400);
+}
+
+// ===== 未知之处（多选项）=====
+function openUnknown(node) {
+  showOverlay(`<div style="text-align:center;margin-bottom:10px"><div style="font-size:40px">👁️</div><div style="font-size:13px;color:#8B7D6B;margin-top:2px">废弃数据终端 · 闪烁屏幕</div></div>
+    <div style="font-size:18px;color:#d4874a;text-align:center;margin-bottom:6px">❔ 未知岔路</div>
+    <div style="font-size:11px;color:#8B7D6B;text-align:center;margin-bottom:14px">前方有三条小路，选一条探索</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="choice-btn" onclick="doExplore('scrap')"><span class="c-icon">🔩</span><span class="c-text"><span class="c-title">废料堆</span><span class="c-desc">翻找垃圾堆，可能找到废料或金币</span></span></button>
+      <button class="choice-btn" onclick="doExplore('heal')"><span class="c-icon">💊</span><span class="c-text"><span class="c-title">废弃医疗站</span><span class="c-desc">搜索医疗物资，有机会回血</span></span></button>
+      <button class="choice-btn" onclick="doExplore('shield')"><span class="c-icon">🛡️</span><span class="c-text"><span class="c-title">军需仓库</span><span class="c-desc">寻找防护装备，可能获得护甲</span></span></button>
+    </div>`, 'unknown');
+}
+
+function doExplore(type) {
+  if (eventChoiceLock) return;
+  eventChoiceLock = true;
+  const r = Math.random();
+  if (type === 'scrap') {
+    if (r < 0.3) { state.scrap[1]=(state.scrap[1]||0)+3; showMapHint('🔩 找到3个1★废料！'); }
+    else if (r < 0.6) { state.gold += 12; showMapHint('💰 发现12金币！'); }
+    else { state.scrap[1]=(state.scrap[1]||0)+1; state.gold += 5; showMapHint('🔩 找到1★废料+5💰'); }
+  } else if (type === 'heal') {
+    if (r < 0.4) { state.hp = Math.min(state.maxHp, state.hp + 8); showMapHint('💊 找到医疗包！+8❤️'); }
+    else if (r < 0.7) { state.hp = Math.min(state.maxHp, state.hp + 4); showMapHint('💊 找到绷带！+4❤️'); }
+    else { state.scrap[1]=(state.scrap[1]||0)+1; showMapHint('🔩 医疗站已空，找到1★废料'); }
+  } else if (type === 'shield') {
+    if (r < 0.3) { state.shield += 10; showMapHint('🛡️ 找到军用护甲！+10护甲'); }
+    else if (r < 0.6) { state.shield += 5; showMapHint('🛡️ 找到铁皮护板！+5护甲'); }
+    else { state.gold += 8; showMapHint('💰 仓库已空，找到8金币'); }
+  }
+  updateStatus();
+  setTimeout(() => { closeOverlay(); eventChoiceLock = false; }, 600);
+}
+
+// ===== 篝火休息（多选项）=====
+function openRest(node) {
+  playBGM('rest');
+  const healAmt = Math.floor(state.maxHp * 0.3);
+  showOverlay(`<div style="text-align:center;margin-bottom:10px"><div style="font-size:40px">🏕️</div><div style="font-size:13px;color:#8B7D6B;margin-top:2px">废土旅人营地</div></div>
+    <div style="font-size:18px;color:#d4874a;text-align:center;margin-bottom:6px">🔥 篝火休息</div>
+    <div style="font-size:11px;color:#8B7D6B;text-align:center;margin-bottom:14px">围坐在篝火旁，选择一项增益</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="choice-btn" onclick="doRest('heal')"><span class="c-icon">❤️</span><span class="c-text"><span class="c-title">恢复生命</span><span class="c-desc">恢复30%生命值 (+${healAmt}HP)</span></span></button>
+      <button class="choice-btn" onclick="doRest('purify')"><span class="c-icon">✨</span><span class="c-text"><span class="c-title">净化装备</span><span class="c-desc">移除道具卡的断裂累积</span></span></button>
+      <button class="choice-btn" onclick="doRest('upgrade')"><span class="c-icon">⚡</span><span class="c-text"><span class="c-title">升级能量</span><span class="c-desc">最大能量永久+1</span></span></button>
+    </div>
+    <div style="margin-top:12px;text-align:center"><button class="result-btn" onclick="closeOverlay()" style="padding:8px 24px;font-size:12px">跳过休息</button></div>`, 'rest');
+}
+
+function doRest(type) {
+  if (type === 'heal') {
+    const healAmt = Math.floor(state.maxHp * 0.3);
+    state.hp = Math.min(state.maxHp, state.hp + healAmt);
+    showMapHint(`❤️ 恢复 ${healAmt} 点生命`);
+  } else if (type === 'purify') {
+    // 重置所有背包道具的断裂计数
+    if (state.backpack) state.backpack.forEach(item => { item.uses = 0; });
+    showMapHint('✨ 道具焕然一新！断裂风险已重置');
+  } else if (type === 'upgrade') {
+    state.maxEnergy += 1;
+    state.energy = state.maxEnergy;
+    showMapHint(`⚡ 最大能量提升至 ${state.maxEnergy}`);
+  }
+  updateStatus();
+  closeOverlay();
+}
+
+// ===== 通用UI（新版在场景背景图区域定义）=====
+
+function closeOverlay() {
+  document.getElementById('resultOverlay').classList.remove('show');
+  // 非战斗节点完成后自动推进到下一列
+  if (currentNonBattleNode) {
+    const { node, lane: nl } = currentNonBattleNode;
+    if (!state.completed.includes(node.id)) {
+      completeNode(node.id, nl);
+    }
+    currentNonBattleNode = null;
+  }
+}
+
+function showResult(title, desc, isFinal) {
+  document.getElementById('resultTitle').textContent = title;
+  document.getElementById('resultDesc').textContent = desc;
+  document.getElementById('resultOverlay').classList.add('show');
+}
+
+function closeResult() {
+  document.getElementById('resultOverlay').classList.remove('show');
+  const isDead = state.hp <= 0;
+  const isBossWin = battleNode && battleNode.isBoss && !isDead;
+  
+  battleNode = null;
+  currentMonster = null;
+  
+  if (isBossWin) {
+    document.getElementById('battleOverlay').classList.remove('show');
+    state.floor++;
+    if (state.floor > 15) {
+      showMapHint('👑 恭喜通关废铁高塔！你是废土之王！');
+      state.floor = 15;
+    } else {
+      const newZone = getCurrentZone();
+      showMapHint(`🎉 第${state.floor-1}层通关！进入${newZone.name} [${state.floor}F]`);
+      state.completed = [];
+      state.unlocked = ['0_0','0_1','0_2'];
+      state.col = 0; state.lane = -1; state.shield = 0;
+      const dm = diffMult();
+      const healAmt = Math.floor(state.maxHp * 0.2 * dm.heal);
+      state.hp = Math.min(state.maxHp, state.hp + healAmt);
+      state.gold += Math.floor(15 * dm.gold);
+      updateStatus();
+      buildMap();
+    }
+  } else if (isDead) {
+    document.getElementById('battleOverlay').classList.remove('show');
+    showMapHint('💀 你被击败了...点击起点重新挑战');
+    state.hp = Math.floor(state.maxHp * 0.5);
+    updateStatus();
+  }
+  updateStatus();
+}
+
+// 地图上的提示
+function showMapHint(text) {
+  const hint = document.getElementById('mapHint');
+  if (!hint) return;
+  hint.textContent = text;
+  hint.style.opacity = '1';
+  clearTimeout(hint._timer);
+  hint._timer = setTimeout(() => { hint.style.opacity = '0'; }, 2000);
+}
+
+function updateStatus() {
+  document.getElementById('sHp').textContent = state.hp;
+  document.getElementById('statusHp').textContent = state.hp;
+  document.getElementById('statusShield').textContent = state.shield;
+  document.getElementById('sEnergy').textContent = state.energy;
+  document.getElementById('statusEnergy').textContent = state.energy;
+  document.getElementById('sScrap').textContent = `1★×${state.scrap[1]||0}`;
+  document.getElementById('statusScrap').textContent = `1★×${state.scrap[1]||0} 2★×${state.scrap[2]||0} 3★×${state.scrap[3]||0}`;
+  document.getElementById('sGold').textContent = state.gold;
+  document.getElementById('statusGold').textContent = state.gold;
+  document.getElementById('sIdeas').textContent = state.ideas;
+  document.getElementById('statusIdeas').textContent = state.ideas;
+  
+  const laneLabel = document.getElementById('laneLabel');
+  if (state.lane >= 0) {
+    laneLabel.textContent = `📍 ${LANE_LABELS[state.lane]} · 第${state.col+1}列`;
+  } else {
+    laneLabel.textContent = '👆 点击起点开始';
+  }
+}
+
+// ===== 废土印记（遗物）UI =====
+function openRelicUI() {
+  const slots = state.relics;
+  let html = `<div style="padding:16px;text-align:center;min-width:320px">
+    <div style="font-size:16px;color:#FFD700;margin-bottom:8px">🗿 废土印记（${slots.filter(r=>r).length}/3）</div>
+    <div style="font-size:10px;color:#8B7D6B;margin-bottom:12px">替换新印记会打碎旧的</div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-bottom:12px">`;
+  
+  for (let i = 0; i < 3; i++) {
+    const r = slots[i];
+    if (r) {
+      const rel = RELICS[r];
+      html += `<div style="width:90px;padding:10px 6px;background:#2a1a00;border:2px solid #FFD700;border-radius:8px;text-align:center">
+        <div style="font-size:24px;margin-bottom:4px">${rel.icon}</div>
+        <div style="font-size:10px;color:#FFD700;font-weight:600">${rel.name}</div>
+        <div style="font-size:7px;color:#8B7D6B;margin:2px 0">${rel.rarity}</div>
+        <div style="font-size:7px;color:#d4c9a8">${rel.desc}</div>
+        <button onclick="destroyRelic(${i})" style="margin-top:6px;padding:2px 8px;border-radius:3px;border:1px solid #ff475744;background:#3d1a1a;color:#ff4757;font-size:8px;cursor:pointer">💥 打碎</button>
+      </div>`;
+    } else {
+      html += `<div style="width:90px;padding:10px 6px;background:#1a1410;border:2px dashed #3d3028;border-radius:8px;text-align:center">
+        <div style="font-size:24px;opacity:0.3">❓</div>
+        <div style="font-size:9px;color:#555">空位</div>
+        <div style="font-size:7px;color:#3d3028">${i+1}/3</div>
+      </div>`;
+    }
+  }
+  
+  html += `</div>
+    <div style="margin-top:8px">
+      <button onclick="addTestRelic()" style="padding:4px 12px;border-radius:4px;border:1px solid #6b5540;background:#1a1410;color:#d4c9a8;font-size:10px;cursor:pointer;margin-right:6px">🎁 测试添加</button>
+      <button onclick="closeOverlay()" style="padding:4px 12px;border-radius:4px;border:1px solid #6b5540;background:#1a1410;color:#d4c9a8;font-size:10px;cursor:pointer">关闭</button>
+    </div>
+  </div>`;
+  showOverlay(html);
+  updateRelicDisplay();
+}
+
+function destroyRelic(idx) {
+  const relicId = state.relics[idx];
+  if (!relicId) return;
+  const rel = RELICS[relicId];
+  state.relics[idx] = null;
+  showMapHint(`💥 ${rel.name} 已打碎`);
+  openRelicUI();
+  updateRelicDisplay();
+}
+
+function addTestRelic() {
+  const ids = Object.keys(RELICS);
+  const empty = state.relics.findIndex(r => !r);
+  if (empty < 0) { showMapHint('印记已满！先打碎一个'); return; }
+  const pick = ids[Math.floor(Math.random() * ids.length)];
+  state.relics[empty] = pick;
+  showMapHint(`✨ 获得 ${RELICS[pick].name}`);
+  openRelicUI();
+  updateRelicDisplay();
+}
+
+function updateRelicDisplay() {
+  const el = document.getElementById('relicDisplay');
+  if (el) {
+    const count = state.relics.filter(r => r).length;
+    el.textContent = count > 0 ? `🗿 ${count}/3` : '🗿 印记';
+  }
+}
+
+// ===== 职业系统 =====
+const JOBS = {
+  wrecker:   { name:'拆解师', enName:'The Wrecker', weapon:'🔧', title:'废铁猎手', hp:55, atk:8, def:5, energy:3, color:'#D97706', desc:'40%瓦解敌人增益，每驱散1个伤害+50%', style:'瓦解·破甲爆发' },
+  forger:    { name:'锻造师', enName:'The Forger', weapon:'⚒️', title:'熔炉之主', hp:50, atk:7, def:6, energy:3, color:'#FFD700', desc:'消耗废料强化卡牌，最多3次，后期极强', style:'锻造·卡牌强化' },
+  recycler:  { name:'回收师', enName:'The Recycler', weapon:'♻️', title:'废品行者', hp:48, atk:6, def:4, energy:4, color:'#84CC16', desc:'弃牌触发回收循环，牌库运转极快', style:'回收·无限循环' },
+  toxic:     { name:'毒药师', enName:'The Toxic', weapon:'🧪', title:'污染使者', hp:45, atk:5, def:3, energy:4, color:'#A78BFA', desc:'毒素每层每回合1伤害，死亡50%传染', style:'毒素·群体传染' },
+  overload:  { name:'过载师', enName:'The Overload', weapon:'⚡', title:'电弧操纵者', hp:60, atk:10, def:2, energy:3, color:'#FF4500', desc:'油污超60进入过载，攻击+100%但自伤', style:'过载·极限爆发' },
+  assembler: { name:'组装师', enName:'The Assembler', weapon:'🧩', title:'零件大师', hp:52, atk:7, def:5, energy:3, color:'#22A5F7', desc:'2-3张牌合体为强力组合卡', style:'合体·策略组合' },
+};
+
+// ===== 入口界面逻辑 =====
+let selectedJob = null;
+const JOB_KEYS = ['wrecker','forger','recycler','toxic','overload','assembler'];
+
+// 生成废铁粒子
+function createParticles() {
+  const el = document.getElementById('particles');
+  const icons = ['&#x2699;','&#x1F529;','&#x26A1;','&#x1F527;','&#x1F6CE;','&#x2692;'];
+  for (let i = 0; i < 20; i++) {
+    const s = document.createElement('span');
+    s.innerHTML = icons[i % icons.length];
+    s.style.left = Math.random() * 100 + '%';
+    s.style.fontSize = (14 + Math.random() * 18) + 'px';
+    s.style.animationDuration = (6 + Math.random() * 8) + 's';
+    s.style.animationDelay = (Math.random() * 10) + 's';
+    el.appendChild(s);
+  }
+}
+
+// 选择难度
+function selectDifficulty(level) {
+  state.difficulty = level;
+  ['easy','normal','hard'].forEach(k => {
+    const btn = document.getElementById('diff' + k.charAt(0).toUpperCase() + k.slice(1));
+    btn.className = 'diff-btn';
+    if (k === level) btn.classList.add('selected-' + k);
+  });
+}
+
+// 到职业选择屏
+function goToJobSelect() {
+  const diffLabel = { easy:'🌱 简单', normal:'⚙️ 普通', hard:'💀 困难' };
+  document.getElementById('jobDiffLabel').textContent = diffLabel[state.difficulty] || '⚙️ 普通';
+  renderJobGrid();
+  document.getElementById('entryScreen').classList.add('hide');
+  document.getElementById('jobScreen').classList.remove('hide');
+}
+
+// 返回标题屏
+function showEntryScreen() {
+  selectedJob = null;
+  document.getElementById('jobScreen').classList.add('hide');
+  document.getElementById('entryScreen').classList.remove('hide');
+}
+
+// 渲染职业卡片
+function renderJobGrid() {
+  const grid = document.getElementById('jobGrid');
+  grid.innerHTML = JOB_KEYS.map(key => {
+    const j = JOBS[key];
+    return `<div class="job-card" id="jobCard_${key}" onclick="selectJob('${key}')" style="border-color:${selectedJob===key?j.color:'#3d3028'};background:${selectedJob===key?`${j.color}15`:'#1a1410'};box-shadow:${selectedJob===key?`0 0 12px ${j.color}33`:'none'}">
+      <div class="job-icon">${j.weapon}</div>
+      <div class="job-name" style="color:${selectedJob===key?j.color:'#d4c9a8'}">${j.name}</div>
+      <div class="job-stats">❤️${j.hp} ⚔️${j.atk} 🛡️${j.def} ⚡${j.energy}</div>
+      <div class="job-desc">${j.desc}</div>
+      <div class="job-style">${j.style}</div>
+    </div>`;
+  }).join('');
+  updateJobConfirm();
+}
+
+// 选择职业
+function selectJob(key) {
+  selectedJob = key;
+  renderJobGrid();
+}
+
+// 更新确认按钮状态
+function updateJobConfirm() {
+  const btn = document.getElementById('jobConfirmBtn');
+  const name = document.getElementById('jobSelName');
+  if (selectedJob) {
+    const j = JOBS[selectedJob];
+    name.textContent = j.weapon + ' ' + j.name;
+    btn.classList.add('active');
+    btn.textContent = '⚔️ 确认出发';
+  } else {
+    name.textContent = '—';
+    btn.classList.remove('active');
+    btn.textContent = '⚔️ 确认出发';
+  }
+}
+
+// 确认出发 - 初始化游戏
+function confirmStart() {
+  if (!selectedJob) return;
+  const j = JOBS[selectedJob];
+  state.job = selectedJob;
+  state.difficulty = state.difficulty || 'normal';
+  
+  // 按职业设置初始属性
+  state.maxHp = j.hp;
+  state.hp = j.hp;
+  state.maxEnergy = j.energy;
+  state.energy = j.energy;
+  
+  // 难度修正
+  if (state.difficulty === 'easy') {
+    state.maxHp = Math.floor(state.maxHp * 1.2);
+    state.hp = state.maxHp;
+    state.gold = 40;
+    state.backpack = [
+      { id:'shank', uid:'sh1', uses:0 },
+      { id:'pipe', uid:'pp1', uses:0 },
+      { id:'medkit', uid:'mk1', uses:0 },
+      { id:'battery', uid:'bt1', uses:0 },
+    ];
+  } else if (state.difficulty === 'hard') {
+    state.maxHp = Math.floor(state.maxHp * 0.8);
+    state.hp = state.maxHp;
+    state.gold = 15;
+    state.backpack = [
+      { id:'pipe', uid:'pp1', uses:0 },
+    ];
+  }
+  
+  // 隐藏入口界面
+  document.getElementById('jobScreen').classList.add('hide');
+  document.getElementById('entryScreen').classList.add('hide');
+  
+  // 启动游戏
+  const startZone = getCurrentZone();
+  setMapBg(startZone.id);
+  updateStatus();
+  buildMap();
+}
+
+// 初始化 - 显示入口界面
+createParticles();
+
+// ===== BGM音频系统（程序化废土氛围音乐）=====
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+let bgmNodes = {};
+let isMuted = false;
+let currentBgm = null;
+let bgmGain = null;
+let audioStarted = false;
+
+/**
+ * 初始化音频上下文（惰性初始化，需用户交互后激活）
+ */
+function initAudio() {
+  if (!audioCtx) {
+    try {
+      audioCtx = new AudioCtx();
+      bgmGain = audioCtx.createGain();
+      bgmGain.gain.value = 0.85; // 主音量
+      bgmGain.connect(audioCtx.destination);
+    } catch(e) { return; }
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(function(){});
+  }
+}
+
+/**
+ * 生成白噪声（用于工业噪声、风声等）
+ */
+function createNoise(duration, type) {
+  if (!audioCtx) return null;
+  const sr = audioCtx.sampleRate;
+  const len = sr * duration;
+  const buf = audioCtx.createBuffer(1, len, sr);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) {
+    if (type === 'brown') {
+      // 布朗噪声（低频重）
+      data[i] = (Math.random() * 2 - 1) * 0.5;
+      if (i > 0) data[i] = (data[i] + data[i-1] * 0.9) * 0.5;
+    } else if (type === 'pink') {
+      // 粉红噪声（自然感）
+      data[i] = Math.random() * 2 - 1;
+      if (i > 0) data[i] = (data[i] + data[i-1] * 0.7) * 0.6;
+    } else {
+      // 白噪声
+      data[i] = Math.random() * 2 - 1;
+    }
+  }
+  return buf;
+}
+
+/**
+ * 创建持续低频嗡鸣
+ */
+function createDrone(freq, detune, type) {
+  if (!audioCtx) return null;
+  type = type || 'sawtooth';
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  if (detune) osc.detune.value = detune;
+  gain.gain.value = 0;
+  osc.connect(gain);
+  // 淡入 - 显著提高音量
+  gain.gain.linearRampToValueAtTime(0.35, audioCtx.currentTime + 2);
+  // 带通滤波器 - 保留中高频让声音可听
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = Math.max(freq * 3, 200);
+  filter.Q.value = 0.5;
+  gain.connect(filter);
+  return { osc: osc, gain: gain, filter: filter, node: filter };
+}
+
+/**
+ * 创建LFO低频振荡（制造起伏感）
+ */
+function createLFO(target, rate, depth) {
+  if (!audioCtx) return null;
+  const lfo = audioCtx.createOscillator();
+  const lfoGain = audioCtx.createGain();
+  lfo.type = 'sine';
+  lfo.frequency.value = rate;
+  lfoGain.gain.value = depth;
+  lfo.connect(lfoGain);
+  lfoGain.connect(target.frequency);
+  lfo.start();
+  return lfo;
+}
+
+/**
+ * 创建脉冲节奏（用于战斗鼓点）
+ */
+function createPulse(rate, gainVal, freq) {
+  if (!audioCtx) return null;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = freq || 80;
+  gain.gain.value = 0;
+  
+  // 脉冲调制：按rate频率产生短促脉冲
+  const lfo = audioCtx.createOscillator();
+  const lfoG = audioCtx.createGain();
+  lfo.type = 'sine';
+  lfo.frequency.value = rate;
+  lfoG.gain.value = gainVal || 0.15;
+  lfo.connect(lfoG);
+  lfoG.connect(gain.gain);
+  // 偏移使始终为正
+  const bias = audioCtx.createConstantSource ? audioCtx.createConstantSource() : null;
+  if (bias) {
+    bias.offset.value = gainVal || 0.15;
+    bias.connect(gain.gain);
+    bias.start();
+  }
+  
+  osc.connect(gain);
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 200;
+  gain.connect(filter);
+  
+  lfo.start();
+  osc.start();
+  
+  return { osc: osc, gain: gain, filter: filter, lfo: lfo, lfoG: lfoG, bias: bias, node: filter };
+}
+
+/**
+ * 创建金属碰撞声（瞬态）
+ */
+function createClangScheduled(time, freq, dur) {
+  if (!audioCtx) return;
+  try {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(freq || 800, time);
+    osc.frequency.exponentialRampToValueAtTime((freq||800)*0.3, time + (dur||0.3));
+    gain.gain.setValueAtTime(0.08, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + (dur||0.3));
+    
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = (freq||800) * 2;
+    filter.Q.value = 5;
+    
+    osc.connect(gain);
+    gain.connect(filter);
+    filter.connect(bgmGain);
+    
+    osc.start(time);
+    osc.stop(time + (dur||0.3) + 0.05);
+  } catch(e) {}
+}
+
+/**
+ * 创建液体泡泡声（用于油海区域）
+ */
+function createBubbleScheduled(time, freq) {
+  if (!audioCtx) return;
+  try {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq || 200, time);
+    osc.frequency.linearRampToValueAtTime((freq||200) * 1.5, time + 0.1);
+    gain.gain.setValueAtTime(0.06, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.25);
+    osc.connect(gain);
+    gain.connect(bgmGain);
+    osc.start(time);
+    osc.stop(time + 0.3);
+  } catch(e) {}
+}
+
+/**
+ * 创建电流噼啪声（用于电路区域）
+ */
+function createSparkScheduled(time) {
+  if (!audioCtx) return;
+  try {
+    const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.08, audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < buf.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.02));
+    }
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.05, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.value = 2000;
+    src.connect(gain);
+    gain.connect(filter);
+    filter.connect(bgmGain);
+    src.start(time);
+  } catch(e) {}
+}
+
+/**
+ * 创建篝火噼啪声
+ */
+function createFireCrackleScheduled(time) {
+  if (!audioCtx) return;
+  try {
+    const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.12, audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < buf.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.03));
+    }
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.03, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.12);
+    src.connect(gain);
+    gain.connect(bgmGain);
+    src.start(time);
+  } catch(e) {}
+}
+
+/**
+ * 停止所有BGM
+ */
+function stopBGM() {
+  Object.keys(bgmNodes).forEach(function(key) {
+    try {
+      if (bgmNodes[key].stop) bgmNodes[key].stop();
+      else if (bgmNodes[key].osc && bgmNodes[key].osc.stop) bgmNodes[key].osc.stop();
+      if (bgmNodes[key].lfo && bgmNodes[key].lfo.stop) bgmNodes[key].lfo.stop();
+      if (bgmNodes[key].lfoG) try { bgmNodes[key].lfoG.disconnect(); } catch(e) {}
+      if (bgmNodes[key].gain) try { bgmNodes[key].gain.disconnect(); } catch(e) {}
+      if (bgmNodes[key].filter) try { bgmNodes[key].filter.disconnect(); } catch(e) {}
+      if (bgmNodes[key].bias) try { bgmNodes[key].bias.stop(); } catch(e) {}
+    } catch(e) {}
+  });
+  // 清除定时器
+  if (bgmNodes._interval) {
+    clearInterval(bgmNodes._interval);
+    clearTimeout(bgmNodes._timeout);
+  }
+  bgmNodes = {};
+}
+
+/**
+ * 播放BGM - 芯片音乐（chiptune）风格
+ * 使用方波 + 三角波 + 简单打击乐，废土风旋律
+ */
+function playBGM(type, subType) {
+  if (isMuted) return;
+  initAudio();
+  if (!audioCtx) return;
+  if (currentBgm === type + ':' + subType) return;
+  stopBGM();
+  currentBgm = type + ':' + subType;
+  if (audioCtx.state === 'suspended') audioCtx.resume().catch(function(){});
+  
+  // 芯片音乐音阶（C小调布鲁斯 - 废土感）
+  const SCALE = [262, 311, 349, 370, 392, 466, 523, 622, 698, 740, 784, 932]; // C4-Bb5
+  const BASS = [131, 155, 175, 185, 196, 233]; // C3-Bb3
+
+  // 播放一个芯片音
+  function chipNote(freq, dur, vol, type) {
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = type || 'square';
+    osc.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(vol || 0.12, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(g);
+    g.connect(bgmGain);
+    osc.start(t);
+    osc.stop(t + dur);
+  }
+
+  // 民谣口琴音色（锯齿波+带通滤波）
+  function folkHarmonica(freq, dur, vol) {
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(freq, t);
+    osc.frequency.linearRampToValueAtTime(freq * 1.02, t + 0.05);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol || 0.06, t + 0.04);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    const f = audioCtx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.value = freq * 2;
+    f.Q.value = 2;
+    osc.connect(g);
+    g.connect(f);
+    f.connect(bgmGain);
+    osc.start(t);
+    osc.stop(t + dur);
+  }
+
+  // 民谣吉他拨弦（快速衰减三角波）
+  function folkGuitar(freq, vol) {
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, t);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.5, t + 0.15);
+    g.gain.setValueAtTime(vol || 0.05, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    osc.connect(g);
+    g.connect(bgmGain);
+    osc.start(t);
+    osc.stop(t + 0.15);
+  }
+
+  // 播放一个鼓点
+  function chipDrum(type) {
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime;
+    if (type === 'kick') {
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(120, t);
+      osc.frequency.exponentialRampToValueAtTime(30, t + 0.1);
+      g.gain.setValueAtTime(0.25, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+      osc.connect(g);
+      g.connect(bgmGain);
+      osc.start(t); osc.stop(t + 0.12);
+    } else if (type === 'snare') {
+      const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.08, audioCtx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      const g = audioCtx.createGain();
+      g.gain.setValueAtTime(0.12, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+      src.connect(g);
+      g.connect(bgmGain);
+      src.start(t);
+    } else if (type === 'hat') {
+      const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.04, audioCtx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.3;
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      const g = audioCtx.createGain();
+      g.gain.setValueAtTime(0.06, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+      const f = audioCtx.createBiquadFilter();
+      f.type = 'highpass';
+      f.frequency.value = 5000;
+      src.connect(g);
+      g.connect(f);
+      f.connect(bgmGain);
+      src.start(t);
+    }
+  }
+
+  // 民谣风格旋律 - 口琴+吉他，上头又好听
+  const MELODIES = {
+    trash:   [4,5,6,5, 4,3,1,3],
+    metal:   [6,8,6,5, 6,8,10,8],
+    oil:     [3,5,6,5, 3,5,3,1],
+    circuit: [8,10,8,7, 6,8,10,8],
+    forge:   [6,6,8,8, 10,8,6,5],
+    toxic:   [1,3,4,3, 1,3,4,3],
+    throne:  [6,8,10,12, 10,8,6,8],
+    battle:  [4,5,4,3, 4,5,4,8],
+    boss:    [6,8,10,8, 6,8,10,12],
+    shop:    [1,3,5,6, 5,3,1,3],
+    craft:   [3,5,6,5, 3,5,6,8],
+    rest:    [1,3,5,3, 1,3,5,3],
+  };
+
+  const melody = MELODIES[subType] || MELODIES.trash;
+  
+  // 民谣和弦进行
+  const CHORDS = {
+    trash:   [1,4,1,5], metal:   [6,2,6,2], oil:     [3,6,3,6],
+    circuit: [8,5,8,5], forge:   [6,3,6,3], toxic:   [1,3,1,3],
+    throne:  [6,2,6,2], battle:  [4,1,4,1], boss:    [6,2,6,2],
+    shop:    [1,4,1,4], craft:   [3,6,3,6], rest:    [1,4,1,4],
+  };
+  const chords = CHORDS[subType] || CHORDS.trash;
+
+  // BPM
+  const bpmMap = {
+    map: 100, battle: 150, boss: 160, shop: 120, craft: 125, rest: 90
+  };
+  const bpm = bpmMap[type] || 100;
+  const noteLen = 60 / bpm;
+  const beatLen = noteLen * 0.9;
+
+  // 场景音色配置 - 民谣风
+  const SCENE_STYLE = {
+    trash:   { lead:'whistle', drum:'light', chord:true, vol:0.09 },
+    metal:   { lead:'harmonica', drum:'light', chord:true, vol:0.08 },
+    oil:     { lead:'whistle', drum:'light', chord:true, vol:0.1 },
+    circuit: { lead:'whistle', drum:'light', chord:false, vol:0.07 },
+    forge:   { lead:'harmonica', drum:'heavy', chord:true, vol:0.1 },
+    toxic:   { lead:'whistle', drum:'sparse', chord:true, vol:0.1 },
+    throne:  { lead:'harmonica', drum:'majestic', chord:true, vol:0.11 },
+    battle:  { lead:'whistle', drum:'battle', chord:false, vol:0.12 },
+    boss:    { lead:'harmonica', drum:'boss', chord:true, vol:0.14 },
+    shop:    { lead:'whistle', drum:'bouncy', chord:true, vol:0.09 },
+    craft:   { lead:'harmonica', drum:'heavy', chord:false, vol:0.09 },
+    rest:    { lead:'whistle', drum:'none', chord:true, vol:0.07 },
+  };
+  const style = SCENE_STYLE[subType] || SCENE_STYLE.trash;
+
+  let step = 0;
+  bgmNodes._interval = setInterval(function() {
+    if (isMuted) return;
+    
+    // 旋律 - 民谣乐器
+    const noteIdx = melody[step % melody.length];
+    let freq = 0;
+    if (noteIdx > 0 && noteIdx <= SCALE.length) {
+      freq = SCALE[noteIdx - 1];
+    }
+    
+    if (freq > 0) {
+      if (style.lead === 'harmonica') {
+        // 口琴主音
+        folkHarmonica(freq, beatLen * 0.7, style.vol);
+        // 每2拍加一个吉他拨弦
+        if (step % 2 === 0) folkGuitar(freq * 0.5, style.vol * 0.5);
+      } else {
+        // 口哨主音（三角波）
+        chipNote(freq, beatLen * 0.6, style.vol, 'triangle');
+        // 每2拍吉他伴奏
+        if (step % 2 === 0) folkGuitar(freq * 0.33, style.vol * 0.4);
+      }
+      // 每4拍低音加强
+      if (step % 4 === 0 && subType !== 'rest') {
+        chipNote(freq / 2, beatLen * 0.4, style.vol * 0.3, 'triangle');
+      }
+    }
+    
+    // 鼓点 - 不同场景不同节奏
+    const d = step;
+    if (style.drum === 'battle') {
+      if (d % 4 === 0) chipDrum('kick');
+      if (d % 4 === 2) { chipDrum('kick'); chipDrum('snare'); }
+      if (d % 2 === 1) chipDrum('hat');
+      if (d % 8 === 3 || d % 8 === 7) chipDrum('hat');
+    } else if (style.drum === 'boss') {
+      if (d % 4 === 0) chipDrum('kick');
+      if (d % 4 === 2) chipDrum('snare');
+      if (d % 2 === 1) chipDrum('hat');
+      if (d % 4 === 0) folkHarmonica(80, beatLen * 0.5, 0.1);
+    } else if (style.drum === 'heavy') {
+      if (d % 4 === 0) chipDrum('kick');
+      if (d % 4 === 2) chipDrum('snare');
+      if (d % 8 === 4) chipDrum('kick');
+    } else if (style.drum === 'light') {
+      if (d % 4 === 0) chipDrum('kick');
+      if (d % 8 === 4) chipDrum('snare');
+      if (d % 4 === 2) chipDrum('hat');
+    } else if (style.drum === 'sparse') {
+      if (d % 8 === 0) chipDrum('kick');
+      if (d % 16 === 8) chipDrum('snare');
+    } else if (style.drum === 'majestic') {
+      if (d % 4 === 0) chipDrum('kick');
+      if (d % 8 === 4) chipDrum('snare');
+      if (d % 4 === 0) folkGuitar(65, 0.06);
+    } else if (style.drum === 'bouncy') {
+      if (d % 4 === 0) chipDrum('kick');
+      if (d % 4 === 2) chipDrum('snare');
+      if (d % 2 === 1) chipDrum('hat');
+    }
+    
+    // 民谣和弦伴奏（每4拍扫弦）
+    if (style.chord && step % 4 === 0 && chords.length > 0) {
+      const ci = chords[(step / 4) % chords.length];
+      if (ci > 0 && ci <= SCALE.length) {
+        const cf = SCALE[ci - 1];
+        // 吉他和弦扫弦（根音+五度+八度）
+        folkGuitar(cf, 0.04);
+        folkGuitar(cf * 1.5, 0.025);
+        // 低音弦
+        chipNote(cf * 0.5, beatLen * 0.6, 0.03, 'triangle');
+      }
+    }
+    
+    step++;
+  }, noteLen * 1000);
+  
+  // 记录BPM用于清理
+  bgmNodes._bpm = bpm;
+}
+
+/**
+ * 切换静音/取消静音
+ */
+function toggleMute() {
+  isMuted = !isMuted;
+  const btn = document.getElementById('muteBtn');
+  if (!btn) return;
+  // 首次点击：初始化音频
+  if (!audioStarted) {
+    audioStarted = true;
+    initAudio();
+    btn.style.animation = ''; // 停止脉冲
+  }
+  btn.textContent = isMuted ? '🔇' : '🔊';
+  btn.title = isMuted ? '点击开启BGM' : '点击静音';
+  if (isMuted) {
+    stopBGM();
+  } else {
+    initAudio();
+    // 根据当前UI恢复BGM
+    const overlay = document.getElementById('battleOverlay');
+    const resultOverlay = document.getElementById('resultOverlay');
+    if (overlay.classList.contains('show')) {
+      const monster = currentMonster;
+      if (monster && monster.isBoss) playBGM('boss');
+      else playBGM('battle');
+    } else if (resultOverlay.classList.contains('show')) {
+      // 商店/事件等保留当前bgm不变
+    } else {
+      const zone = getCurrentZone();
+      playBGM('map', zone.id);
+    }
+  }
+}
+
+// ===== 战斗音效系统（攻击/防御/回收）=====
+function playSE(type) {
+  initAudio();
+  if (!audioCtx || isMuted) return;
+  const now = audioCtx.currentTime;
+  
+  if (type === 'attack') {
+    // === 重击音效：低音thump+白噪声爆破 ===
+    // 低音层
+    const osc = audioCtx.createOscillator();
+    const g1 = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
+    g1.gain.setValueAtTime(0.6, now);
+    g1.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    osc.connect(g1).connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.15);
+    // 噪声层
+    const bufSize = audioCtx.sampleRate * 0.08;
+    const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufSize * 0.15));
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buf;
+    const g2 = audioCtx.createGain();
+    g2.gain.setValueAtTime(0.5, now);
+    g2.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    noise.connect(g2).connect(audioCtx.destination);
+    noise.start(now);
+  } else if (type === 'skill') {
+    // === 金属碰撞音效：带通噪声+泛音 ===
+    const osc = audioCtx.createOscillator();
+    const g1 = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(800, now);
+    osc.frequency.exponentialRampToValueAtTime(200, now + 0.2);
+    g1.gain.setValueAtTime(0.5, now);
+    g1.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    osc.connect(g1).connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.25);
+    // 附加敲击
+    const osc2 = audioCtx.createOscillator();
+    const g2 = audioCtx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(1200, now);
+    osc2.frequency.exponentialRampToValueAtTime(600, now + 0.08);
+    g2.gain.setValueAtTime(0.3, now);
+    g2.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+    osc2.connect(g2).connect(audioCtx.destination);
+    osc2.start(now); osc2.stop(now + 0.1);
+  } else if (type === 'heal') {
+    // === 治疗音效：上升音阶 ===
+    [0, 0.06, 0.12].forEach((delay, i) => {
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'sine';
+      const baseFreq = 500 + i * 200;
+      osc.frequency.setValueAtTime(baseFreq, now + delay);
+      osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.5, now + delay + 0.15);
+      g.gain.setValueAtTime(0, now + delay);
+      g.gain.linearRampToValueAtTime(0.25, now + delay + 0.05);
+      g.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.2);
+      osc.connect(g).connect(audioCtx.destination);
+      osc.start(now + delay); osc.stop(now + delay + 0.2);
+    });
+  } else if (type === 'power') {
+    // === 能量音效：快速上升扫频 ===
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(200, now);
+    osc.frequency.exponentialRampToValueAtTime(2000, now + 0.15);
+    g.gain.setValueAtTime(0.3, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    const f = audioCtx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.setValueAtTime(3000, now);
+    f.frequency.exponentialRampToValueAtTime(200, now + 0.2);
+    osc.connect(g).connect(f).connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.2);
+  }
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>废铁高塔 · 角色风格预览</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d0d0d;color:#E8E0D0;font-family:'Segoe UI','Microsoft YaHei',sans-serif;padding:20px;display:flex;flex-direction:column;align-items:center;gap:16px}
+h1{font-size:22px;color:#FDE68A;letter-spacing:3px;text-shadow:0 0 12px rgba(253,230,138,0.2)}
+.sub{font-size:10px;color:#6b5540;margin-top:-8px;letter-spacing:6px}
+.styles{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;width:100%;max-width:1000px}
+.style-card{background:#1a1410;border:1px solid #3d3028;border-radius:10px;padding:14px;flex:1;min-width:280px}
+.style-card h3{font-size:13px;color:#d4874a;margin-bottom:4px;text-align:center}
+.style-card .desc{font-size:9px;color:#6b5540;text-align:center;margin-bottom:10px}
+.job-row{display:flex;justify-content:center;gap:6px;flex-wrap:wrap}
+.job-item{text-align:center;padding:8px 6px;background:#0d0d0d;border-radius:6px;width:90px}
+.job-item canvas{display:block;margin:0 auto;image-rendering:pixelated}
+.job-item .jname{font-size:8px;color:#8B7D6B;margin-top:3px}
+.job-item .jen{font-size:7px;color:#555}
+.tag{display:inline-block;font-size:8px;padding:2px 8px;border-radius:4px;margin-top:6px}
+.tag.a{border:1px solid #D97706;color:#D97706;background:#2a1a0a}
+.tag.b{border:1px solid #84CC16;color:#84CC16;background:#1a2a0a}
+.tag.c{border:1px solid #A78BFA;color:#A78BFA;background:#1a0a2a}
+.select-btn{display:block;margin:10px auto 0;padding:6px 16px;border-radius:4px;border:1px solid #6b5540;background:#1a1410;color:#8B7D6B;font-size:10px;cursor:pointer;font-family:inherit}
+.select-btn:hover{border-color:#D97706;color:#D97706}
+.footer{font-size:8px;color:#3d3028;margin-top:10px}
+</style>
+</head>
+<body>
+
+<h1>⚙️ 废铁高塔 · 角色风格预览</h1>
+<div class="sub">Choose Your Style</div>
+
+<div class="styles" id="previewArea"></div>
+<div class="footer">选择你喜欢的风格，告诉我就换上去</div>
+
+<script>
+const JOBS = [
+  { key:'wrecker', name:'拆解师', en:'The Wrecker', weapon:'🔧' },
+  { key:'forger', name:'锻造师', en:'The Forger', weapon:'⚒️' },
+  { key:'recycler', name:'回收师', en:'The Recycler', weapon:'♻️' },
+  { key:'toxic', name:'毒药师', en:'The Toxic', weapon:'🧪' },
+  { key:'overload', name:'过载师', en:'The Overload', weapon:'⚡' },
+  { key:'assembler', name:'组装师', en:'The Assembler', weapon:'🧩' },
+];
+
+const COLORS = {
+  wrecker:   { body:'#8B4513', accent:'#D97706', skin:'#DEB887', weapon:'#A0A0A0' },
+  forger:    { body:'#4A0000', accent:'#FF4500', skin:'#D2A679', weapon:'#888' },
+  recycler:  { body:'#2F4F2F', accent:'#84CC16', skin:'#C4A882', weapon:'#999' },
+  toxic:     { body:'#2A0A2A', accent:'#A78BFA', skin:'#B8956A', weapon:'#0F0' },
+  overload:  { body:'#0A2A4A', accent:'#00BFFF', skin:'#C4A882', weapon:'#0AF' },
+  assembler: { body:'#3A2A0A', accent:'#FFD700', skin:'#DEB887', weapon:'#FF0' },
+};
+
+// ===== 风格A: 像素8-bit (80x100, 2px pixel) =====
+function styleA(ctx, w, h, col) {
+  const px = (x, y, color) => { ctx.fillStyle = color; ctx.fillRect(x, y, 2, 2); };
+  for (let x = 28; x < 36; x++) for (let y = 66; y < 84; y++) px(x, y, '#2A1A0A');
+  for (let x = 44; x < 52; x++) for (let y = 66; y < 84; y++) px(x, y, '#3A2A1A');
+  for (let x = 24; x < 36; x++) for (let y = 92; y < 100; y++) px(x, y, '#1A0A0A');
+  for (let x = 44; x < 56; x++) for (let y = 92; y < 100; y++) px(x, y, '#1A0A0A');
+  for (let x = 24; x < 56; x++) for (let y = 36; y < 68; y++) px(x, y, col.body);
+  for (let x = 28; x < 36; x++) for (let y = 40; y < 54; y++) px(x, y, col.accent);
+  for (let x = 44; x < 52; x++) for (let y = 40; y < 54; y++) px(x, y, col.accent);
+  for (let x = 38; x < 42; x++) for (let y = 38; y < 56; y++) px(x, y, col.accent);
+  for (let x = 22; x < 58; x++) for (let y = 62; y < 66; y++) px(x, y, '#1A0A0A');
+  for (let x = 18; x < 24; x++) for (let y = 38; y < 54; y++) px(x, y, col.body);
+  for (let x = 56; x < 62; x++) for (let y = 38; y < 54; y++) px(x, y, col.body);
+  for (let x = 60; x < 72; x++) for (let y = 34; y < 44; y++) px(x, y, col.weapon);
+  for (let x = 26; x < 54; x++) for (let y = 10; y < 36; y++) px(x, y, col.skin);
+  for (let x = 30; x < 34; x++) for (let y = 16; y < 20; y++) px(x, y, '#fff');
+  for (let x = 46; x < 50; x++) for (let y = 16; y < 20; y++) px(x, y, '#fff');
+  for (let x = 32; x < 34; x++) for (let y = 18; y < 20; y++) px(x, y, '#222');
+  for (let x = 48; x < 50; x++) for (let y = 18; y < 20; y++) px(x, y, '#222');
+}
+
+// ===== 风格B: 大头Q版 (100x120, 2px pixel, 大脑袋) =====
+function styleB(ctx, w, h, col) {
+  const px = (x, y, color) => { ctx.fillStyle = color; ctx.fillRect(x, y, 2, 2); };
+  // Q版大身体 - 短腿
+  for (let x = 34; x < 46; x++) for (let y = 90; y < 100; y++) px(x, y, '#2A1A0A');
+  for (let x = 54; x < 66; x++) for (let y = 90; y < 100; y++) px(x, y, '#3A2A1A');
+  for (let x = 30; x < 70; x++) for (let y = 56; y < 90; y++) px(x, y, col.body);
+  for (let x = 36; x < 50; x++) for (let y = 60; y < 74; y++) px(x, y, col.accent);
+  for (let x = 50; x < 64; x++) for (let y = 60; y < 74; y++) px(x, y, col.accent);
+  // 大头
+  for (let x = 24; x < 76; x++) for (let y = 14; y < 58; y++) px(x, y, col.skin);
+  // 大眼睛
+  for (let x = 34; x < 42; x++) for (let y = 24; y < 34; y++) px(x, y, '#fff');
+  for (let x = 58; x < 66; x++) for (let y = 24; y < 34; y++) px(x, y, '#fff');
+  for (let x = 38; x < 42; x++) for (let y = 28; y < 34; y++) px(x, y, '#222');
+  for (let x = 62; x < 66; x++) for (let y = 28; y < 34; y++) px(x, y, '#222');
+  // 微笑
+  for (let x = 40; x < 60; x++) for (let y = 44; y < 46; y++) px(x, y, '#B8956A');
+  // 武器
+  for (let x = 68; x < 80; x++) for (let y = 60; y < 70; y++) px(x, y, col.weapon);
+}
+
+// ===== 风格C: 剪影+辉光 (dark silhouette with colored glow) =====
+function styleC(ctx, w, h, col) {
+  // 黑色剪影
+  ctx.fillStyle = '#000';
+  // 头
+  ctx.beginPath(); ctx.arc(50, 28, 20, 0, Math.PI * 2); ctx.fill();
+  // 身体
+  ctx.fillRect(30, 46, 40, 44);
+  // 腿
+  ctx.fillRect(32, 88, 14, 12); ctx.fillRect(54, 88, 14, 12);
+  // 武器
+  ctx.fillRect(68, 48, 16, 8);
+  
+  // 外发光
+  ctx.shadowColor = col.accent;
+  ctx.shadowBlur = 18;
+  ctx.fillStyle = col.accent;
+  ctx.globalAlpha = 0.15;
+  ctx.beginPath(); ctx.arc(50, 28, 24, 0, Math.PI * 2); ctx.fill();
+  ctx.fillRect(26, 42, 48, 52);
+  ctx.globalAlpha = 1;
+  ctx.shadowBlur = 0;
+  
+  // 眼睛发光
+  ctx.shadowColor = col.accent;
+  ctx.shadowBlur = 12;
+  ctx.fillStyle = col.accent;
+  ctx.globalAlpha = 0.8;
+  ctx.fillRect(36, 22, 8, 6); ctx.fillRect(56, 22, 8, 6);
+  ctx.globalAlpha = 1;
+  ctx.shadowBlur = 0;
+}
+
+function renderAll() {
+  const area = document.getElementById('previewArea');
+  
+  const styles = [
+    { id:'a', name:'像素8-bit', desc:'方块像素风，复古游戏感', tag:'tag a', render:styleA, size:['80x100',84,104] },
+    { id:'b', name:'大头Q版', desc:'Q版可爱风，大眼睛大头', tag:'tag b', render:styleB, size:['100x120',100,120] },
+    { id:'c', name:'剪影辉光', desc:'黑色剪影+彩色光效，炫酷神秘', tag:'tag c', render:styleC, size:['100x130',100,130] },
+  ];
+  
+  styles.forEach(s => {
+    const card = document.createElement('div');
+    card.className = 'style-card';
+    
+    let html = `<h3>${s.name}</h3><div class="desc">${s.desc} · ${s.size[0]}</div><div class="job-row">`;
+    
+    JOBS.forEach(j => {
+      const col = COLORS[j.key];
+      const c = document.createElement('canvas');
+      c.width = s.size[1]; c.height = s.size[2];
+      const ctx = c.getContext('2d');
+      ctx.clearRect(0, 0, c.width, c.height);
+      // 调用对应的渲染函数，传入canvas宽高和颜色
+      s.render(ctx, s.size[1], s.size[2], col);
+      
+      const dataUrl = c.toDataURL();
+      html += `<div class="job-item">
+        <canvas width="${s.size[1]}" height="${s.size[2]}" style="width:${Math.floor(s.size[1]/2)}px;height:${Math.floor(s.size[2]/2)}px"></canvas>
+        <div class="jname">${j.weapon} ${j.name}</div>
+        <div class="jen">${j.en}</div>
+      </div>`;
+    });
+    
+    html += `</div><button class="select-btn" onclick="selectStyle('${s.id}')">选这个 →</button>`;
+    card.innerHTML = html;
+    area.appendChild(card);
+    
+    // 把canvas数据画进去
+    const canvases = card.querySelectorAll('canvas');
+    JOBS.forEach((j, i) => {
+      const col = COLORS[j.key];
+      const ctx = canvases[i].getContext('2d');
+      ctx.clearRect(0, 0, s.size[1], s.size[2]);
+      s.render(ctx, s.size[1], s.size[2], col);
+    });
+  });
+}
+
+function selectStyle(id) {
+  const names = { a:'像素8-bit', b:'大头Q版', c:'剪影辉光' };
+  alert('你选了：' + names[id] + '！告诉我这个编号（' + id + '），我帮你换上');
+}
+
+renderAll();
+</script>
+</body>
+</html>

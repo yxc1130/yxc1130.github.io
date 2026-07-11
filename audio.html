@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>废铁高塔 · 音频方案</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d0d0d;font-family:'Segoe UI','Microsoft YaHei',sans-serif;color:#E8E0D0;padding:20px;display:flex;flex-direction:column;align-items:center;gap:16px}
+h1{font-size:24px;color:#FDE68A;text-shadow:0 0 12px rgba(253,230,138,0.2);letter-spacing:3px}
+.sub{font-size:11px;color:#6b5540;letter-spacing:8px;text-transform:uppercase;margin-top:-8px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.tab{padding:8px 20px;border-radius:6px;border:1px solid #3d3028;background:#1a1410;color:#8B7D6B;cursor:pointer;font-size:12px;transition:all .2s;font-family:inherit}
+.tab.active{border-color:#D97706;color:#D97706;background:#2a1a0a;box-shadow:0 0 10px rgba(217,119,6,0.15)}
+.tab:hover{border-color:#6b5540}
+.panel{display:none;width:100%;max-width:800px;flex-direction:column;gap:8px}
+.panel.active{display:flex}
+.card{background:#1a1410;border:1px solid #3d3028;border-radius:8px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;transition:all .2s}
+.card:hover{border-color:#6b5540}
+.card-icon{font-size:28px;flex-shrink:0;width:40px;text-align:center}
+.card-body{flex:1;min-width:0}
+.card-title{font-size:13px;color:#d4c9a8;font-weight:600}
+.card-meta{font-size:10px;color:#8B7D6B;margin-top:1px}
+.card-desc{font-size:10px;color:#6b5540;margin-top:3px;line-height:1.4}
+.card-badge{display:inline-block;font-size:8px;padding:1px 6px;border-radius:3px;margin:2px 2px 0 0}
+.badge-battle{background:#3d1a1a;color:#ff4757}
+.badge-boss{background:#3d1a2a;color:#A78BFA}
+.badge-event{background:#1a2a1a;color:#84CC16}
+.badge-special{background:#2a1a0a;color:#F59E0B}
+.badge-ui{background:#1a1a2a;color:#22A5F7}
+.badge-card{background:#2a1a1a;color:#d4874a}
+.badge-combat{background:#1a2a2a;color:#70e000}
+.badge-zone{background:#1a1a1a;color:#d4c9a8}
+.sources{margin-top:10px;width:100%;max-width:800px}
+.sources h3{font-size:14px;color:#d4874a;margin-bottom:6px;border-bottom:1px solid #3d3028;padding-bottom:4px}
+.source-item{font-size:10px;color:#8B7D6B;padding:4px 0;display:flex;gap:8px}
+.source-item a{color:#A78BFA;text-decoration:none}
+.source-item a:hover{color:#d4874a;text-decoration:underline}
+.footer{font-size:9px;color:#3d3028;margin-top:10px;padding-top:8px;border-top:1px solid #1a1410;width:100%;max-width:800px;text-align:center}
+.search-box{width:100%;max-width:800px;padding:10px 14px;border-radius:6px;border:1px solid #3d3028;background:#1a1410;color:#d4c9a8;font-size:12px;font-family:inherit;outline:none}
+.search-box:focus{border-color:#D97706}
+.track-list{display:flex;flex-direction:column;gap:10px;width:100%;max-width:800px}
+.track-category{font-size:14px;color:#d4874a;font-weight:600;margin-top:6px;padding-bottom:2px;border-bottom:1px solid #2a1a0a}
+.category-desc{font-size:10px;color:#6b5540;margin-bottom:4px}
+</style>
+</head>
+<body>
+<h1>⚙️ 废铁高塔 · 音频方案</h1>
+<div class="sub">Audio Resource Guide</div>
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('bgm')">🎵 BGM</div>
+  <div class="tab" onclick="switchTab('sfx')">🔊 UI音效</div>
+  <div class="tab" onclick="switchTab('ambient')">🌊 环境音</div>
+  <div class="tab" onclick="switchTab('sources')">📦 下载指南</div>
+</div>
+<input class="search-box" id="searchBox" placeholder="🔍 搜索音效..." oninput="filterCards()">
+
+<!-- BGM -->
+<div class="panel active" id="panel-bgm">
+  <div class="track-list" id="bgmList"></div>
+</div>
+
+<!-- SFX -->
+<div class="panel" id="panel-sfx">
+  <div class="track-list" id="sfxList"></div>
+</div>
+
+<!-- Ambient -->
+<div class="panel" id="panel-ambient">
+  <div class="track-list" id="ambientList"></div>
+</div>
+
+<!-- Sources -->
+<div class="panel" id="panel-sources">
+  <div class="sources">
+    <h3>🌐 免费音源网站</h3>
+    <div class="source-item">1. <a href="https://freesound.org" target="_blank">freesound.org</a> — 71万+音效，CC0/CC BY多种授权，需注册</div>
+    <div class="source-item">2. <a href="https://zapsplat.com" target="_blank">zapsplat.com</a> — 15万+音效，免费账户每日限下载，需署名</div>
+    <div class="source-item">3. <a href="https://soundjay.com" target="_blank">soundjay.com</a> — 免费直接下载，无需注册，查看具体许可</div>
+    <div class="source-item">4. <a href="https://freepd.com" target="_blank">freepd.com</a> — BGM专用，CC0完全免费无需署名</div>
+    <div class="source-item">5. <a href="https://incompetech.com" target="_blank">incompetech.com</a> — Kevin MacLeod，CC BY署名即可商用</div>
+    <h3 style="margin-top:16px">📁 推荐目录结构</h3>
+    <div style="font-size:11px;color:#8B7D6B;line-height:1.8;background:#1a1410;padding:14px;border-radius:6px;border:1px solid #3d3028;margin-top:4px">
+废铁高塔/audio/<br>
+├── bgm/<br>
+│   ├── battle/&emsp;← 战斗BGM × 4<br>
+│   ├── boss/&emsp;&emsp;← BossBGM × 4<br>
+│   ├── event/&emsp;&emsp;← 事件BGM × 4<br>
+│   └── special/&emsp;← 特殊BGM × 4<br>
+├── sfx/<br>
+│   ├── ui/&emsp;&emsp;&emsp;← UI音效 × 12<br>
+│   ├── card/&emsp;&emsp;&emsp;← 卡牌音效 × 4<br>
+│   └── combat/&emsp;← 战斗音效 × 4<br>
+├── ambient/<br>
+│   ├── zones/&emsp;&emsp;← 7个生态区环境音<br>
+│   └── camp/&emsp;&emsp;← 营地环境音<br>
+└── audio_manifest.json
+    </div>
+  </div>
+</div>
+
+<div class="footer">废铁高塔 v1.0 · 音频资源参考指南</div>
+
+<script>
+const DATA = {
+  bgm: [
+    { icon:'⚔️', name:'Darkest Dungeon - Combat', by:'Stuart Chatwood', scene:'普通战斗', badge:'badge-battle', desc:'绝望中透着狠劲，适合垃圾平原/金属森林常规战斗', source:'游戏BGM — YouTube/Spotify' },
+    { icon:'⚔️', name:'Volatile Reaction', by:'Kevin MacLeod', scene:'工业战斗', badge:'badge-battle', desc:'紧张工业电子，适合电路荒漠/核心熔炉战斗', source:'incompetech.com · CC BY' },
+    { icon:'⚔️', name:'Steel and Rust', by:'freepd.com', scene:'重型战斗', badge:'badge-battle', desc:'重型工业金属，适合油海/核心熔炉高强度战斗', source:'freepd.com · CC0' },
+    { icon:'⚔️', name:'Impact Allegretto', by:'Kevin MacLeod', scene:'快速战斗', badge:'badge-battle', desc:'快速小提琴+重鼓，适合初期快节奏战斗', source:'incompetech.com · CC BY' },
+    { icon:'👑', name:'Darkest Dungeon - Boss', by:'Stuart Chatwood', scene:'Boss战', badge:'badge-boss', desc:'多段式弦乐，压抑到爆发', source:'游戏BGM — YouTube/Spotify' },
+    { icon:'👑', name:'Heat of Battle', by:'freepd.com', scene:'史诗Boss', badge:'badge-boss', desc:'史诗管弦乐+电子合成器', source:'freepd.com · CC0' },
+    { icon:'👑', name:'The Descent', by:'Kevin MacLeod', scene:'大型Boss', badge:'badge-boss', desc:'低音大提琴+管钟递进，大型Boss决战', source:'incompetech.com · CC BY' },
+    { icon:'👑', name:'Final Battle — End Boss', by:'freepd.com', scene:'最终Boss', badge:'badge-boss', desc:'合唱团+重鼓+管弦乐高潮', source:'freepd.com · CC0' },
+    { icon:'❓', name:'Exploration', by:'freepd.com', scene:'废土探索', badge:'badge-event', desc:'空旷废土氛围，风声+金属碰撞', source:'freepd.com · CC0' },
+    { icon:'❓', name:'Myst on the Moor', by:'Kevin MacLeod', scene:'路线选择', badge:'badge-event', desc:'空灵风笛+弦乐', source:'incompetech.com · CC BY' },
+    { icon:'❓', name:'Bazaar', by:'freepd.com', scene:'商店', badge:'badge-event', desc:'中东游牧风，手鼓+弹拨乐器', source:'freepd.com · CC0' },
+    { icon:'❓', name:'Gathering Darkness', by:'Kevin MacLeod', scene:'高风险事件', badge:'badge-event', desc:'低沉大提琴+钟声', source:'incompetech.com · CC BY' },
+    { icon:'🌀', name:'Unseen Horrors', by:'Kevin MacLeod', scene:'悬疑恐怖', badge:'badge-special', desc:'低频嗡鸣+不和谐弦乐', source:'incompetech.com · CC BY' },
+    { icon:'🌀', name:'Campfire Tales', by:'freepd.com', scene:'篝火回复', badge:'badge-special', desc:'温暖木吉他+口琴', source:'freepd.com · CC0' },
+    { icon:'🌀', name:'Death\'s Prelude', by:'freepd.com', scene:'濒死氛围', badge:'badge-special', desc:'管风琴+钟声', source:'freepd.com · CC0' },
+    { icon:'🌀', name:'Ascending the Throne', by:'freepd.com', scene:'王座区域', badge:'badge-special', desc:'大气上升旋律，废铁王座区域主题曲', source:'freepd.com · CC0' },
+  ],
+  sfx: [
+    { icon:'🖱️', name:'按钮悬停', scene:'UI', badge:'badge-ui', desc:'短促金属摩擦声', source:'soundjay.com · Button Hover' },
+    { icon:'🖱️', name:'按钮点击', scene:'UI', badge:'badge-ui', desc:'低沉金属撞击声', source:'zapsplat.com · Industrial Button Click' },
+    { icon:'🖱️', name:'开关切换', scene:'UI', badge:'badge-ui', desc:'生锈齿轮咬合声', source:'freesound.org · Rusty Gear Turn' },
+    { icon:'🖱️', name:'弹窗出现', scene:'UI', badge:'badge-ui', desc:'铁链拉伸声', source:'freesound.org · Chain Pull' },
+    { icon:'🃏', name:'出牌', scene:'卡牌', badge:'badge-card', desc:'锋利金属切割/拔剑声', source:'zapsplat.com · Sword Draw' },
+    { icon:'🃏', name:'卡牌悬浮', scene:'卡牌', badge:'badge-card', desc:'轻微金属嗡鸣', source:'freesound.org · Metal Ring Short' },
+    { icon:'🃏', name:'卡牌升级', scene:'卡牌', badge:'badge-card', desc:'清脆金属叮声+上升音调', source:'soundjay.com · Power Up' },
+    { icon:'🃏', name:'抽牌', scene:'卡牌', badge:'badge-card', desc:'纸张摩擦+金属碰撞复合音', source:'zapsplat.com · Card Flip + Metal Hit' },
+    { icon:'💥', name:'攻击命中', scene:'战斗', badge:'badge-combat', desc:'重物打击声（金属+骨裂感）', source:'zapsplat.com · Heavy Punch' },
+    { icon:'💥', name:'护甲增加', scene:'战斗', badge:'badge-combat', desc:'厚重铁板声', source:'zapsplat.com · Metal Plate Clang' },
+    { icon:'💥', name:'能量恢复', scene:'战斗', badge:'badge-combat', desc:'机器充能/电流声', source:'freesound.org · Machine Hum' },
+    { icon:'💥', name:'回合结束', scene:'战斗', badge:'badge-combat', desc:'蒸汽阀门泄压声', source:'freesound.org · Steam Release' },
+  ],
+  ambient: [
+    { icon:'🌪️', name:'废土风声', scene:'基础环境', badge:'badge-zone', desc:'持续低频风声+远处沙粒滚动', source:'freesound.org · Desert Wind Loop' },
+    { icon:'🌲', name:'金属森林', scene:'区域环境', badge:'badge-zone', desc:'风吹铁片碰撞声（锈蚀金属嘎吱作响）', source:'zapsplat.com · Rusty Metal Creak' },
+    { icon:'🛢️', name:'油海环境', scene:'区域环境', badge:'badge-zone', desc:'粘稠液体冒泡+远处燃烧噼啪声', source:'freesound.org · Oil Bubbles' },
+    { icon:'⚡', name:'电路荒漠', scene:'区域环境', badge:'badge-zone', desc:'电流滋滋声+电子设备嗡鸣', source:'freesound.org · Electrical Hum' },
+    { icon:'🔥', name:'核心熔炉', scene:'区域环境', badge:'badge-zone', desc:'持续燃烧声+熔炉轰鸣', source:'zapsplat.com · Furnace Roar' },
+    { icon:'☠️', name:'污染深渊', scene:'区域环境', badge:'badge-zone', desc:'毒液滴落+低频恐怖嗡嗡声', source:'freesound.org · Toxic Drip' },
+    { icon:'👑', name:'废铁王座', scene:'区域环境', badge:'badge-zone', desc:'沉重机械运转+远处金属碰撞回响', source:'zapsplat.com · Heavy Machinery' },
+    { icon:'🔥', name:'篝火营地', scene:'营地', badge:'badge-zone', desc:'木头燃烧噼啪+远处虫鸣', source:'soundjay.com · Campfire' },
+  ]
+};
+
+function renderList(id, items) {
+  const el = document.getElementById(id);
+  el.innerHTML = items.map(item => `
+    <div class="card" data-search="${item.name} ${item.scene} ${item.desc}">
+      <div class="card-icon">${item.icon}</div>
+      <div class="card-body">
+        <div class="card-title">${item.name}</div>
+        <div class="card-meta">${item.scene} · ${item.by || ''}</div>
+        <div class="card-desc">${item.desc}</div>
+        <div style="margin-top:2px">
+          <span class="card-badge ${item.badge}">${item.scene}</span>
+          <span style="font-size:8px;color:#6b5540;margin-left:4px">${item.source}</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+renderList('bgmList', DATA.bgm);
+renderList('sfxList', DATA.sfx);
+renderList('ambientList', DATA.ambient);
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`.tab[onclick="switchTab('${name}')"]`).classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+  document.getElementById('searchBox').value = '';
+  filterCards();
+}
+
+function filterCards() {
+  const q = document.getElementById('searchBox').value.toLowerCase();
+  document.querySelectorAll('.card').forEach(c => {
+    c.style.display = (!q || c.dataset.search.toLowerCase().includes(q)) ? 'flex' : 'none';
+  });
+}
+</script>
+</body>
+</html>
