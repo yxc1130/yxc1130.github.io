@@ -19,12 +19,14 @@ body{background:#0d0d0d;font-family:'Segoe UI','Microsoft YaHei',sans-serif;colo
 /* 手机竖屏强制旋转横屏（CSS暴力旋转） */
 @media(max-width:900px){
   body.force-landscape{
-    width:100vh;height:100vw;
-    transform:rotate(90deg);transform-origin:0 0;
-    position:fixed;top:0;left:100vw;margin:0;padding:0;display:block;gap:0;overflow:hidden
+    width:100vw;height:100vh;margin:0;padding:0;display:block;gap:0;overflow:hidden;
+    position:fixed;top:0;left:0
   }
   body.force-landscape .game-rotate{
-    width:100%;height:100%;overflow:hidden
+    position:absolute;top:0;left:0;
+    width:100vh;height:100vw;
+    transform-origin:0 0;
+    transform:rotate(90deg) translateY(-100%)
   }
 }
 
