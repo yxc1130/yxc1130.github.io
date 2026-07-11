@@ -15,6 +15,11 @@ body{background:#0d0d0d;font-family:'Segoe UI','Microsoft YaHei',sans-serif;colo
 @keyframes rotateAnim{0%,100%{transform:rotate(0deg)}50%{transform:rotate(90deg)}}
 .rotate-hint .txt{font-size:16px;color:#d4874a;text-align:center;line-height:1.6}
 .rotate-hint .subtxt{font-size:12px;color:#6b5540;text-align:center}
+/* CSS-only 横屏强制：手机竖屏时只显示提示 */
+@media(max-width:900px)and(orientation:portrait){
+  .rotate-hint{display:flex!important}
+  .map-container,.status-bar,h1,.sub{display:none!important}
+}
 
 /* 手机横屏适配 */
 @media(max-width:1024px){
@@ -3674,23 +3679,43 @@ function playSE(type) {
 </div>
 
 <script>
-// 横屏检测
+// 横屏检测 - 强制横屏模式
 function checkOrientation() {
   const hint = document.getElementById('rotateHint');
   if (!hint) return;
-  const isMobile = window.innerWidth < 768;
+  const isMobile = window.innerWidth < 900;
   const isLandscape = window.innerWidth > window.innerHeight;
-  if (isMobile && !isLandscape) {
+  const isLandscapeMatch = window.matchMedia('(orientation:landscape)').matches;
+  const isLandscapeAny = isLandscape || isLandscapeMatch;
+  if (isMobile && !isLandscapeAny) {
     hint.classList.add('show');
   } else {
     hint.classList.remove('show');
   }
 }
+// 用 matchMedia 监听更可靠
+const mqLandscape = window.matchMedia('(orientation:landscape)');
+mqLandscape.addEventListener('change', checkOrientation);
 window.addEventListener('resize', checkOrientation);
 window.addEventListener('orientationchange', function() {
-  setTimeout(checkOrientation, 300);
+  setTimeout(checkOrientation, 500);
+  setTimeout(checkOrientation, 1000);
 });
 checkOrientation();
+
+// 锁定横屏（支持 Screen Orientation API 的浏览器）
+function lockLandscape() {
+  try {
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock('landscape').catch(function(){});
+    }
+  } catch(e) {}
+}
+// 用户首次交互后尝试锁定横屏
+document.addEventListener('click', function lockOnce() {
+  lockLandscape();
+  document.removeEventListener('click', lockOnce);
+}, { once: true });
 </script>
 </body>
 </html>
