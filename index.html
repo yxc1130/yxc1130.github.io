@@ -17,8 +17,15 @@ body{background:#0d0d0d;font-family:'Segoe UI','Microsoft YaHei',sans-serif;colo
 @keyframes rotateAnim{0%,100%{transform:rotate(0deg)}50%{transform:rotate(90deg)}}
 .rotate-hint .txt{font-size:16px;color:#d4874a;text-align:center;line-height:1.6}
 .rotate-hint .subtxt{font-size:12px;color:#6b5540;text-align:center}
+.rotate-hint .force-btn{padding:14px 40px;border-radius:10px;border:2px solid #d4874a;background:linear-gradient(180deg,#3d3028,#1a1410);color:#d4874a;font-size:16px;cursor:pointer;font-family:inherit;transition:all .25s;letter-spacing:1px;margin-top:8px}
+.rotate-hint .force-btn:hover{background:linear-gradient(180deg,#5a4538,#2a1f14);transform:translateY(-2px);box-shadow:0 4px 20px rgba(212,135,74,0.2)}
 
-/* 手机横屏提示：竖屏时隐藏游戏，显示提示；横屏时显示游戏 */
+/* 强制横屏模式（按钮触发） */
+body.force-landscape{width:100vw;height:100vh;margin:0;padding:0;display:block;gap:0;overflow:hidden;position:fixed;top:0;left:0}
+body.force-landscape .game-rotate{display:block!important;position:absolute;top:0;left:0;width:100vh;height:100vw;transform-origin:0 0;transform:rotate(90deg) translateY(-100%)}
+body.force-landscape .rotate-hint{display:none!important}
+
+/* 手机横屏提示：竖屏时隐藏游戏，显示提示 */
 @media(max-width:900px)and(orientation:portrait){
   .game-rotate{display:none!important}
   .rotate-hint{display:flex!important}
@@ -3684,8 +3691,9 @@ function playSE(type) {
 <!-- 横屏提示 -->
 <div class="rotate-hint" id="rotateHint">
   <div class="icon">📱</div>
-  <div class="txt">请将手机横屏游玩<br>Please Rotate Your Device</div>
-  <div class="subtxt">本游戏需横屏模式 · Landscape Mode Required</div>
+  <div class="txt">请将手机横屏游玩</div>
+  <div class="subtxt">或点击下方按钮强制横屏</div>
+  <button class="force-btn" onclick="forceLandscape()">🔄 点击强制横屏</button>
 </div>
 
 <script>
@@ -3699,6 +3707,8 @@ function checkOrientation() {
     hint.classList.add('show');
   } else {
     hint.classList.remove('show');
+    // 物理横屏时取消强制旋转，避免双重变换
+    document.body.classList.remove('force-landscape');
   }
 }
 const mqPortrait = window.matchMedia('(orientation:portrait)');
@@ -3719,6 +3729,12 @@ function tryFullscreen() {
       try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(function(){}); } catch(e){}
     }).catch(function(){});
   }
+}
+
+// 强制横屏（用户点击按钮触发）
+function forceLandscape() {
+  document.body.classList.add('force-landscape');
+  tryFullscreen();
 }
 </script>
 </body>
