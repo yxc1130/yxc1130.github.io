@@ -2,7 +2,9 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>废铁高塔</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -3695,6 +3697,8 @@ function checkOrientation() {
     hint.classList.add('show');
   } else {
     hint.classList.remove('show');
+    // 横屏后尝试全屏
+    tryFullscreen();
   }
 }
 const mqPortrait = window.matchMedia('(orientation:portrait)');
@@ -3704,6 +3708,27 @@ window.addEventListener('orientationchange', function() {
   setTimeout(checkOrientation, 400);
 });
 checkOrientation();
+
+// 全屏功能
+function tryFullscreen() {
+  const el = document.documentElement;
+  if (el.requestFullscreen) {
+    el.requestFullscreen().catch(function(){});
+  } else if (el.webkitRequestFullscreen) {
+    el.webkitRequestFullscreen();
+  } else if (el.msRequestFullscreen) {
+    el.msRequestFullscreen();
+  }
+}
+// 用户交互时尝试全屏
+document.addEventListener('click', function fsOnce() {
+  tryFullscreen();
+  document.removeEventListener('click', fsOnce);
+}, { once: true });
+document.addEventListener('touchstart', function fsOnce2() {
+  tryFullscreen();
+  document.removeEventListener('touchstart', fsOnce2);
+}, { once: true });
 </script>
 </body>
 </html>
